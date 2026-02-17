@@ -1,19 +1,18 @@
 import React, {useCallback, useEffect, useRef} from 'react';
-import {StyleSheet, View, Alert, NativeModules} from 'react-native';
+import {StyleSheet, View, ScrollView, Alert, Text, Pressable, NativeModules} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useNavigation, useRoute, useFocusEffect} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import type {RouteProp} from '@react-navigation/native';
-// launchImageLibrary replaced by native picker
-import {colors} from '../../../core/theme';
+import {colors, fontFamily, borderRadius} from '../../../core/theme';
 import {Icon} from '../../../core/components';
 import {GalleryHeader} from '../components/GalleryHeader';
 import {MediaGrid} from '../components/MediaGrid';
 import {SelectionBar} from '../components/SelectionBar';
+import {CategoryBadge} from '../components/CategoryBadge';
 import {useGalleryStore} from '../store/useGalleryStore';
 import type {RootStackParamList} from '../../../app/navigation/types';
 import type {GalleryMedia} from '../../../core/types';
-import {Pressable} from 'react-native';
 
 const {SecureScreen} = NativeModules;
 
@@ -26,10 +25,14 @@ export function GalleryFolderScreen() {
 
   const {
     media,
+    categories,
     selectedIds,
     selectionMode,
     isUnlocked,
+    filterCategoryId,
+    showFavoritesOnly,
     loadMedia,
+    loadCategories,
     importFromPicker,
     toggleFavorite,
     trashMedia,
@@ -61,7 +64,8 @@ export function GalleryFolderScreen() {
       useGalleryStore.setState({currentFolderId: folderId});
       loadMedia(folderId);
       loadFolders(folderId);
-    }, [folderId, loadMedia, loadFolders]),
+      loadCategories(folderId);
+    }, [folderId, loadMedia, loadFolders, loadCategories]),
   );
 
   const handleImport = async () => {
@@ -119,6 +123,19 @@ export function GalleryFolderScreen() {
     await moveMedia(selectedIds, null);
   };
 
+  const handleFilterCategory = (catId: number | null) => {
+    useGalleryStore.setState({
+      filterCategoryId: filterCategoryId === catId ? null : catId,
+    });
+    loadMedia(folderId);
+  };
+
+  const handleToggleFavorites = () => {
+    const newValue = !showFavoritesOnly;
+    useGalleryStore.setState({showFavoritesOnly: newValue});
+    loadMedia(folderId);
+  };
+
   return (
     <View style={styles.container}>
       <GalleryHeader
@@ -128,6 +145,44 @@ export function GalleryFolderScreen() {
           navigation.goBack();
         }}
       />
+
+      {/* Category filters */}
+      <View style={styles.filtersSection}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filtersRow}>
+          <Pressable
+            onPress={handleToggleFavorites}
+            style={[
+              styles.favChip,
+              showFavoritesOnly && styles.favChipActive,
+            ]}>
+            <Icon
+              name="favorite"
+              size={14}
+              color={showFavoritesOnly ? '#ef4444' : colors.textMuted}
+            />
+            <Text
+              style={[
+                styles.favChipText,
+                showFavoritesOnly && {color: '#ef4444'},
+              ]}>
+              Favoritos
+            </Text>
+          </Pressable>
+
+          {categories.map(cat => (
+            <CategoryBadge
+              key={cat.id}
+              name={cat.name}
+              color={cat.color || '#94a3b8'}
+              active={filterCategoryId === cat.id}
+              onPress={() => handleFilterCategory(cat.id)}
+            />
+          ))}
+        </ScrollView>
+      </View>
 
       <MediaGrid
         media={media}
@@ -163,6 +218,35 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.backgroundDark,
+  },
+  filtersSection: {
+    paddingBottom: 12,
+  },
+  filtersRow: {
+    paddingHorizontal: 16,
+    gap: 8,
+    alignItems: 'center',
+  },
+  favChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: borderRadius.full,
+    borderWidth: 1,
+    borderColor: 'transparent',
+    backgroundColor: colors.surfaceDark,
+    height: 32,
+  },
+  favChipActive: {
+    borderColor: '#ef4444',
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+  },
+  favChipText: {
+    fontFamily: fontFamily.semiBold,
+    fontSize: 12,
+    color: colors.textMuted,
   },
   fab: {
     position: 'absolute',

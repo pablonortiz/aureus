@@ -20,6 +20,10 @@ function formatDuration(seconds: number): string {
   return `${min}:${sec.toString().padStart(2, '0')}`;
 }
 
+// Max width per chip ~45px, gap 3px. For a thumbnail of ~120px with 6px padding each side,
+// usable width is ~108px. That fits roughly 2 chips + overflow indicator.
+const MAX_VISIBLE_CHIPS = 2;
+
 export function MediaThumbnail({
   item,
   selected,
@@ -33,6 +37,10 @@ export function MediaThumbnail({
       ? vaultService.getThumbnailUri(item.filename)
       : vaultService.getFileUri(item.vault_path);
 
+  const categories = item.categories || [];
+  const visibleCats = categories.slice(0, MAX_VISIBLE_CHIPS);
+  const overflowCount = categories.length - MAX_VISIBLE_CHIPS;
+
   return (
     <Pressable
       onPress={onPress}
@@ -43,6 +51,29 @@ export function MediaThumbnail({
         style={styles.image}
         resizeMode="cover"
       />
+
+      {/* Category chips strip */}
+      {categories.length > 0 && (
+        <View style={styles.categoryStrip}>
+          {visibleCats.map(cat => (
+            <View
+              key={cat.id}
+              style={[
+                styles.categoryChip,
+                {backgroundColor: cat.color || '#94a3b8'},
+              ]}>
+              <Text style={styles.categoryChipText} numberOfLines={1}>
+                {cat.name}
+              </Text>
+            </View>
+          ))}
+          {overflowCount > 0 && (
+            <View style={styles.overflowChip}>
+              <Text style={styles.overflowText}>+{overflowCount}</Text>
+            </View>
+          )}
+        </View>
+      )}
 
       {/* Video duration badge */}
       {item.media_type === 'video' && item.duration != null && (
@@ -83,6 +114,38 @@ const styles = StyleSheet.create({
   image: {
     width: '100%',
     height: '100%',
+  },
+  categoryStrip: {
+    position: 'absolute',
+    bottom: 6,
+    left: 4,
+    right: 4,
+    flexDirection: 'row',
+    gap: 3,
+  },
+  categoryChip: {
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 4,
+    maxWidth: 52,
+  },
+  categoryChipText: {
+    fontFamily: fontFamily.bold,
+    fontSize: 8,
+    color: '#fff',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  overflowChip: {
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 4,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+  },
+  overflowText: {
+    fontFamily: fontFamily.bold,
+    fontSize: 8,
+    color: '#fff',
   },
   videoBadge: {
     position: 'absolute',

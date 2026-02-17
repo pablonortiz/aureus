@@ -51,7 +51,7 @@ interface GalleryState {
   exportMedia: (ids: number[]) => Promise<string[]>;
 
   // Actions - Categories
-  loadCategories: () => Promise<void>;
+  loadCategories: (folderId?: number | null) => Promise<void>;
   createCategory: (name: string, color: string, icon: string) => Promise<void>;
   deleteCategory: (id: number) => Promise<void>;
   assignCategories: (mediaId: number, categoryIds: number[]) => Promise<void>;
@@ -217,10 +217,42 @@ export const useGalleryStore = create<GalleryState>((set, get) => ({
     query += ' ORDER BY gm.created_at DESC';
 
     const result = await db.execute(query, params);
-    const media: GalleryMedia[] = [];
-    for (const row of result.rows) {
-      media.push({
-        id: row.id as number,
+
+    // Batch-load all categories in a single query instead of N+1
+    const mediaIds = result.rows.map(r => r.id as number);
+    const categoryMap = new Map<number, GalleryCategory[]>();
+
+    if (mediaIds.length > 0) {
+      const placeholders = mediaIds.map(() => '?').join(',');
+      const catResult = await db.execute(
+        `SELECT gmc.media_id, gc.id, gc.name, gc.color, gc.icon, gc.created_at
+         FROM gallery_media_categories gmc
+         INNER JOIN gallery_categories gc ON gc.id = gmc.category_id
+         WHERE gmc.media_id IN (${placeholders})`,
+        mediaIds,
+      );
+      for (const cr of catResult.rows) {
+        const mid = cr.media_id as number;
+        const cat: GalleryCategory = {
+          id: cr.id as number,
+          name: cr.name as string,
+          color: (cr.color as string) || null,
+          icon: (cr.icon as string) || null,
+          created_at: cr.created_at as string,
+        };
+        const existing = categoryMap.get(mid);
+        if (existing) {
+          existing.push(cat);
+        } else {
+          categoryMap.set(mid, [cat]);
+        }
+      }
+    }
+
+    const media: GalleryMedia[] = result.rows.map(row => {
+      const mediaId = row.id as number;
+      return {
+        id: mediaId,
         filename: row.filename as string,
         original_name: row.original_name as string,
         vault_path: row.vault_path as string,
@@ -234,8 +266,10 @@ export const useGalleryStore = create<GalleryState>((set, get) => ({
         notes: (row.notes as string) || null,
         trashed_at: null,
         created_at: row.created_at as string,
-      });
-    }
+        categories: categoryMap.get(mediaId) || [],
+      };
+    });
+
     set({media, loading: false, currentFolderId: actualFolderId ?? null});
   },
 
@@ -392,11 +426,27 @@ export const useGalleryStore = create<GalleryState>((set, get) => ({
     return exportedPaths;
   },
 
-  loadCategories: async () => {
+  loadCategories: async (folderId) => {
     const db = getDatabase();
-    const result = await db.execute(
-      'SELECT * FROM gallery_categories ORDER BY name',
-    );
+    let query: string;
+    let params: any[];
+
+    if (folderId != null) {
+      // Only categories that have at least one media item in this folder
+      query = `
+        SELECT DISTINCT gc.* FROM gallery_categories gc
+        INNER JOIN gallery_media_categories gmc ON gmc.category_id = gc.id
+        INNER JOIN gallery_media gm ON gm.id = gmc.media_id
+        WHERE gm.folder_id = ? AND gm.trashed_at IS NULL
+        ORDER BY gc.name
+      `;
+      params = [folderId];
+    } else {
+      query = 'SELECT * FROM gallery_categories ORDER BY name';
+      params = [];
+    }
+
+    const result = await db.execute(query, params);
     const categories: GalleryCategory[] = [];
     for (const row of result.rows) {
       categories.push({
