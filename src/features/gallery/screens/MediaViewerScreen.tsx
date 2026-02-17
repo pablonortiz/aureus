@@ -10,8 +10,8 @@ import {
   FlatList,
   TextInput,
   Modal,
+  ScrollView,
   NativeModules,
-  type ViewToken,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useNavigation, useRoute} from '@react-navigation/native';
@@ -81,7 +81,7 @@ export function MediaViewerScreen() {
     return idx >= 0 ? idx : 0;
   });
   const pagerRef = useRef<FlatList>(null);
-  const isUserSwipingRef = useRef(false);
+  const didMountRef = useRef(false);
   const [isZoomed, setIsZoomed] = useState(false);
 
   const handleToggleUI = useCallback(() => setShowUI(prev => !prev), []);
@@ -89,27 +89,28 @@ export function MediaViewerScreen() {
 
   const currentMedia = media[currentIndex];
 
-  // Sync pager when index changes from arrows
+  // Scroll pager when index changes from arrow buttons (skip initial mount)
   useEffect(() => {
-    if (!isUserSwipingRef.current && pagerRef.current && media.length > 0) {
+    if (!didMountRef.current) {
+      didMountRef.current = true;
+      return;
+    }
+    if (pagerRef.current && media.length > 0) {
       pagerRef.current.scrollToIndex({index: currentIndex, animated: true});
     }
-    isUserSwipingRef.current = false;
   }, [currentIndex, media.length]);
 
-  const onViewableItemsChanged = useCallback(
-    ({viewableItems}: {viewableItems: ViewToken[]}) => {
-      if (viewableItems.length > 0 && viewableItems[0].index != null) {
-        isUserSwipingRef.current = true;
-        setCurrentIndex(viewableItems[0].index);
+  // Detect user swipes via momentum end (never fires on mount or programmatic scroll)
+  const handleMomentumEnd = useCallback(
+    (e: any) => {
+      const offsetX = e.nativeEvent.contentOffset.x;
+      const newIndex = Math.round(offsetX / SCREEN_WIDTH);
+      if (newIndex >= 0 && newIndex < media.length) {
+        setCurrentIndex(newIndex);
       }
     },
-    [],
+    [media.length],
   );
-
-  const viewabilityConfig = useRef({
-    viewAreaCoveragePercentThreshold: 50,
-  }).current;
 
   const getItemLayout = useCallback(
     (_data: any, index: number) => ({
@@ -138,29 +139,34 @@ export function MediaViewerScreen() {
     setMediaCategoryIds(result.rows.map(r => r.category_id as number));
   };
 
-  // Auto-hide overlay for videos
-  const scheduleAutoHide = useCallback(() => {
-    if (autoHideTimerRef.current) clearTimeout(autoHideTimerRef.current);
-    autoHideTimerRef.current = setTimeout(() => setShowUI(false), 3000);
-  }, []);
-
+  // Show UI when switching items; auto-hide after 3s for videos
   useEffect(() => {
-    if (currentMedia?.media_type === 'video' && showUI) {
-      scheduleAutoHide();
+    setShowUI(true);
+    if (autoHideTimerRef.current) {
+      clearTimeout(autoHideTimerRef.current);
+      autoHideTimerRef.current = null;
+    }
+    const item = media[currentIndex];
+    if (item?.media_type === 'video') {
+      autoHideTimerRef.current = setTimeout(() => setShowUI(false), 3000);
     }
     return () => {
-      if (autoHideTimerRef.current) clearTimeout(autoHideTimerRef.current);
-    };
-  }, [currentMedia?.media_type, showUI, scheduleAutoHide]);
-
-  // When switching to image, cancel timer and ensure UI visible
-  useEffect(() => {
-    if (currentMedia?.media_type === 'image') {
       if (autoHideTimerRef.current) {
         clearTimeout(autoHideTimerRef.current);
         autoHideTimerRef.current = null;
       }
-      setShowUI(true);
+    };
+  }, [currentIndex, media]);
+
+  // Re-trigger auto-hide when user taps to show UI on a video
+  const handleShowUI = useCallback(() => {
+    setShowUI(true);
+    if (autoHideTimerRef.current) {
+      clearTimeout(autoHideTimerRef.current);
+      autoHideTimerRef.current = null;
+    }
+    if (currentMedia?.media_type === 'video') {
+      autoHideTimerRef.current = setTimeout(() => setShowUI(false), 3000);
     }
   }, [currentMedia?.media_type]);
 
@@ -241,7 +247,24 @@ export function MediaViewerScreen() {
         );
       }
 
-      // Video: no onTap so native controls receive single taps
+      // Video: only mount the Video component for the active item.
+      // Non-active videos show a thumbnail to free decoder/buffer memory.
+      if (!active) {
+        const thumbUri = vaultService.getThumbnailUri(item.filename);
+        return (
+          <View style={styles.mediaPage}>
+            <Image
+              source={{uri: thumbUri}}
+              style={styles.fullImage}
+              resizeMode="contain"
+            />
+            <View style={styles.videoPlayOverlay}>
+              <Icon name="play-circle-filled" size={64} color="rgba(255,255,255,0.7)" />
+            </View>
+          </View>
+        );
+      }
+
       return (
         <View style={styles.mediaPage}>
           <ZoomableView
@@ -252,7 +275,7 @@ export function MediaViewerScreen() {
               style={styles.fullImage}
               controls
               resizeMode="contain"
-              paused={!active}
+              paused={false}
             />
           </ZoomableView>
         </View>
@@ -274,11 +297,19 @@ export function MediaViewerScreen() {
         renderItem={renderMediaItem}
         getItemLayout={getItemLayout}
         initialScrollIndex={currentIndex}
-        onViewableItemsChanged={onViewableItemsChanged}
-        viewabilityConfig={viewabilityConfig}
+        onMomentumScrollEnd={handleMomentumEnd}
         scrollEnabled={!isZoomed}
+        extraData={currentIndex}
         style={styles.pager}
       />
+
+      {/* Tap zone to bring back UI when hidden */}
+      {!showUI && (
+        <Pressable
+          style={[styles.showUITap, {paddingTop: insets.top}]}
+          onPress={handleShowUI}
+        />
+      )}
 
       {/* Top bar */}
       {showUI && (
@@ -433,23 +464,25 @@ export function MediaViewerScreen() {
           <View style={styles.infoSheet}>
             <View style={styles.sheetHandle} />
             <Text style={styles.sheetTitle}>Categorías</Text>
-            {categories.map(cat => (
-              <Pressable
-                key={cat.id}
-                style={styles.catOption}
-                onPress={() => handleToggleCat(cat.id)}>
-                <View
-                  style={[
-                    styles.catDot,
-                    {backgroundColor: cat.color || '#94a3b8'},
-                  ]}
-                />
-                <Text style={styles.catName}>{cat.name}</Text>
-                {mediaCategoryIds.includes(cat.id) && (
-                  <Icon name="check" size={20} color={colors.primary} />
-                )}
-              </Pressable>
-            ))}
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {categories.map(cat => (
+                <Pressable
+                  key={cat.id}
+                  style={styles.catOption}
+                  onPress={() => handleToggleCat(cat.id)}>
+                  <View
+                    style={[
+                      styles.catDot,
+                      {backgroundColor: cat.color || '#94a3b8'},
+                    ]}
+                  />
+                  <Text style={styles.catName}>{cat.name}</Text>
+                  {mediaCategoryIds.includes(cat.id) && (
+                    <Icon name="check" size={20} color={colors.primary} />
+                  )}
+                </Pressable>
+              ))}
+            </ScrollView>
           </View>
         </Pressable>
       </Modal>
@@ -483,6 +516,18 @@ const styles = StyleSheet.create({
   fullImage: {
     width: SCREEN_WIDTH,
     height: SCREEN_HEIGHT,
+  },
+  showUITap: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 80,
+  },
+  videoPlayOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   topBar: {
     position: 'absolute',

@@ -99,7 +99,7 @@ export function GalleryFolderScreen() {
     if (selectionMode) {
       toggleSelection(item.id);
     } else {
-      navigation.navigate('MediaViewer', {mediaId: item.id});
+      navigation.push('MediaViewer', {mediaId: item.id});
     }
   };
 
