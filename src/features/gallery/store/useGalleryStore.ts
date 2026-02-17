@@ -215,6 +215,9 @@ export const useGalleryStore = create<GalleryState>((set, get) => ({
     if (actualFolderId !== null && actualFolderId !== undefined) {
       query += ' AND gm.folder_id = ?';
       params.push(actualFolderId);
+    } else {
+      // Root view: only show media not assigned to any folder
+      query += ' AND gm.folder_id IS NULL';
     }
 
     if (showFavoritesOnly) {
