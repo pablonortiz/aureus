@@ -353,11 +353,11 @@ export const useClipboardStore = create<ClipboardState>((set, get) => ({
   unlockVault: async (pin) => {
     const db = getDatabase();
     const result = await db.execute(
-      "SELECT value FROM app_settings WHERE key = 'clipboard_pin'",
+      "SELECT value FROM app_settings WHERE key = 'app_pin'",
     );
     if (result.rows.length === 0) {
       await db.execute(
-        "INSERT INTO app_settings (key, value) VALUES ('clipboard_pin', ?)",
+        "INSERT INTO app_settings (key, value) VALUES ('app_pin', ?)",
         [pin],
       );
       set({isVaultUnlocked: true});
@@ -374,7 +374,7 @@ export const useClipboardStore = create<ClipboardState>((set, get) => ({
   setPin: async (pin) => {
     const db = getDatabase();
     await db.execute(
-      "INSERT OR REPLACE INTO app_settings (key, value) VALUES ('clipboard_pin', ?)",
+      "INSERT OR REPLACE INTO app_settings (key, value) VALUES ('app_pin', ?)",
       [pin],
     );
   },

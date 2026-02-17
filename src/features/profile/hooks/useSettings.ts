@@ -13,6 +13,8 @@ export interface StorageStats {
   financeCategories: number;
   sourceSearches: number;
   sourceResults: number;
+  galleryMedia: number;
+  galleryFolders: number;
   totalRecords: number;
 }
 
@@ -29,7 +31,7 @@ export function useSettings() {
 
       // Check if PIN exists
       const pinResult = await db.execute(
-        "SELECT value FROM app_settings WHERE key = 'clipboard_pin'",
+        "SELECT value FROM app_settings WHERE key = 'app_pin'",
       );
       setHasPin(pinResult.rows.length > 0);
 
@@ -54,6 +56,8 @@ export function useSettings() {
         db.execute('SELECT COUNT(*) as count FROM finance_categories'),
         db.execute('SELECT COUNT(*) as count FROM source_finder_searches'),
         db.execute('SELECT COUNT(*) as count FROM source_finder_results'),
+        db.execute('SELECT COUNT(*) as count FROM gallery_media'),
+        db.execute('SELECT COUNT(*) as count FROM gallery_folders'),
       ]);
 
       const values = counts.map(r => (r.rows[0].count as number) || 0);
@@ -71,6 +75,8 @@ export function useSettings() {
         financeCategories: values[8],
         sourceSearches: values[9],
         sourceResults: values[10],
+        galleryMedia: values[11],
+        galleryFolders: values[12],
         totalRecords: total,
       });
     } catch {
@@ -97,7 +103,7 @@ export function useSettings() {
     try {
       const db = getDatabase();
       const result = await db.execute(
-        "SELECT value FROM app_settings WHERE key = 'clipboard_pin'",
+        "SELECT value FROM app_settings WHERE key = 'app_pin'",
       );
       if (result.rows.length === 0) {
         return true; // No PIN set, allow
@@ -112,7 +118,7 @@ export function useSettings() {
     try {
       const db = getDatabase();
       await db.execute(
-        "INSERT OR REPLACE INTO app_settings (key, value) VALUES ('clipboard_pin', ?)",
+        "INSERT OR REPLACE INTO app_settings (key, value) VALUES ('app_pin', ?)",
         [newPin],
       );
       setHasPin(true);
@@ -125,7 +131,7 @@ export function useSettings() {
     try {
       const db = getDatabase();
       await db.execute(
-        "DELETE FROM app_settings WHERE key = 'clipboard_pin'",
+        "DELETE FROM app_settings WHERE key = 'app_pin'",
       );
       setHasPin(false);
     } catch {

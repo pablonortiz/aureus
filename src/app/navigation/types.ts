@@ -28,6 +28,11 @@ export type RootStackParamList = {
   AddRecurring: {recurringId?: number} | undefined;
   SourceFinder: undefined;
   SearchResult: {searchId: number};
+  Gallery: undefined;
+  GalleryFolder: {folderId: number; folderName: string};
+  MediaViewer: {mediaId: number};
+  ManageGalleryCategories: undefined;
+  GalleryTrash: undefined;
 };
 
 export type MainTabParamList = {

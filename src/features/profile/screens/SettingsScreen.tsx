@@ -286,6 +286,11 @@ export function SettingsScreen() {
                 label="Buscador"
                 value={`${storageStats.sourceSearches} búsquedas · ${storageStats.sourceResults} resultados`}
               />
+              <StatRow
+                icon="photo-library"
+                label="Galería"
+                value={`${storageStats.galleryMedia} archivos · ${storageStats.galleryFolders} carpetas`}
+              />
             </View>
             <View style={styles.totalRow}>
               <Text style={styles.totalLabel}>Total</Text>

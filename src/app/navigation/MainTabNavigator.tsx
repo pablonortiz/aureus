@@ -50,6 +50,13 @@ const quickActions = [
     route: 'SourceFinder' as const,
     params: undefined,
   },
+  {
+    icon: 'photo-library',
+    label: 'Galería',
+    color: '#8b5cf6',
+    route: 'Gallery' as const,
+    params: undefined,
+  },
 ];
 
 function FABButton() {

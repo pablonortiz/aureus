@@ -73,6 +73,10 @@ export function ProfileScreen() {
           <Text style={styles.statValue}>{stats.searches}</Text>
           <Text style={styles.statLabel}>Búsquedas</Text>
         </View>
+        <View style={styles.statCard}>
+          <Text style={styles.statValue}>{stats.galleryItems}</Text>
+          <Text style={styles.statLabel}>Galería</Text>
+        </View>
       </ScrollView>
 
       {/* Usage Summary */}

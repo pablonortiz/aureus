@@ -20,6 +20,11 @@ import {ManageRecurringScreen} from '../../features/finance/screens/ManageRecurr
 import {AddRecurringScreen} from '../../features/finance/screens/AddRecurringScreen';
 import {SourceFinderScreen} from '../../features/source-finder/screens/SourceFinderScreen';
 import {SearchResultScreen} from '../../features/source-finder/screens/SearchResultScreen';
+import {GalleryScreen} from '../../features/gallery/screens/GalleryScreen';
+import {GalleryFolderScreen} from '../../features/gallery/screens/GalleryFolderScreen';
+import {MediaViewerScreen} from '../../features/gallery/screens/MediaViewerScreen';
+import {ManageGalleryCategoriesScreen} from '../../features/gallery/screens/ManageGalleryCategoriesScreen';
+import {GalleryTrashScreen} from '../../features/gallery/screens/GalleryTrashScreen';
 import type {RootStackParamList} from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -68,6 +73,11 @@ export function RootNavigator() {
         <Stack.Screen name="AddRecurring" component={AddRecurringScreen} />
         <Stack.Screen name="SourceFinder" component={SourceFinderScreen} />
         <Stack.Screen name="SearchResult" component={SearchResultScreen} />
+        <Stack.Screen name="Gallery" component={GalleryScreen} />
+        <Stack.Screen name="GalleryFolder" component={GalleryFolderScreen} />
+        <Stack.Screen name="MediaViewer" component={MediaViewerScreen} />
+        <Stack.Screen name="ManageGalleryCategories" component={ManageGalleryCategoriesScreen} />
+        <Stack.Screen name="GalleryTrash" component={GalleryTrashScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

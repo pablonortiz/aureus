@@ -285,6 +285,78 @@ function runMigrations(database: DB): void {
     );
   `);
 
+  // Gallery module
+  database.executeSync(`
+    CREATE TABLE IF NOT EXISTS gallery_folders (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      parent_id INTEGER REFERENCES gallery_folders(id) ON DELETE CASCADE,
+      cover_media_id INTEGER,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+  `);
+
+  database.executeSync(`
+    CREATE TABLE IF NOT EXISTS gallery_categories (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE,
+      color TEXT,
+      icon TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+  `);
+
+  database.executeSync(`
+    CREATE TABLE IF NOT EXISTS gallery_media (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      filename TEXT NOT NULL,
+      original_name TEXT NOT NULL,
+      vault_path TEXT NOT NULL,
+      media_type TEXT NOT NULL CHECK(media_type IN ('image', 'video')),
+      file_size INTEGER DEFAULT 0,
+      width INTEGER,
+      height INTEGER,
+      duration INTEGER,
+      folder_id INTEGER REFERENCES gallery_folders(id) ON DELETE SET NULL,
+      is_favorite INTEGER DEFAULT 0,
+      notes TEXT,
+      trashed_at TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+  `);
+
+  database.executeSync(`
+    CREATE TABLE IF NOT EXISTS gallery_media_categories (
+      media_id INTEGER NOT NULL REFERENCES gallery_media(id) ON DELETE CASCADE,
+      category_id INTEGER NOT NULL REFERENCES gallery_categories(id) ON DELETE CASCADE,
+      PRIMARY KEY (media_id, category_id)
+    );
+  `);
+
+  // Seed default gallery categories
+  const galleryCatCount = database.executeSync(
+    'SELECT COUNT(*) as count FROM gallery_categories',
+  );
+  if (galleryCatCount.rows[0].count === 0) {
+    const defaultGalleryCategories = [
+      ['General', '#94a3b8', 'folder'],
+      ['Capturas', '#3b82f6', 'screenshot'],
+      ['Personales', '#a855f7', 'person'],
+      ['Memes', '#22c55e', 'mood'],
+    ];
+    for (const [name, color, icon] of defaultGalleryCategories) {
+      database.executeSync(
+        'INSERT OR IGNORE INTO gallery_categories (name, color, icon) VALUES (?, ?, ?)',
+        [name, color, icon],
+      );
+    }
+  }
+
+  // Migrate clipboard_pin → app_pin (one-time)
+  database.executeSync(
+    "UPDATE app_settings SET key = 'app_pin' WHERE key = 'clipboard_pin'",
+  );
+
   // Seed / migrate finance categories
   const hasNewCats = database.executeSync(
     "SELECT COUNT(*) as count FROM finance_categories WHERE name = 'Amors'",

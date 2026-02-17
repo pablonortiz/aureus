@@ -7,3 +7,4 @@ export {Input} from './Input';
 export {Header} from './Header';
 export {SectionTitle} from './SectionTitle';
 export {EmptyState} from './EmptyState';
+export {PinLock} from './PinLock';

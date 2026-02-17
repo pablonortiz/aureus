@@ -148,6 +148,43 @@ export interface SourceResult {
   created_at: string;
 }
 
+// Gallery module types
+export interface GalleryFolder {
+  id: number;
+  name: string;
+  parent_id: number | null;
+  cover_media_id: number | null;
+  created_at: string;
+  media_count?: number;
+  cover_thumbnail?: string;
+}
+
+export interface GalleryMedia {
+  id: number;
+  filename: string;
+  original_name: string;
+  vault_path: string;
+  media_type: 'image' | 'video';
+  file_size: number;
+  width: number | null;
+  height: number | null;
+  duration: number | null;
+  folder_id: number | null;
+  is_favorite: boolean;
+  notes: string | null;
+  trashed_at: string | null;
+  created_at: string;
+  categories?: GalleryCategory[];
+}
+
+export interface GalleryCategory {
+  id: number;
+  name: string;
+  color: string | null;
+  icon: string | null;
+  created_at: string;
+}
+
 // Module definition for the dashboard
 export interface ModuleDefinition {
   id: string;

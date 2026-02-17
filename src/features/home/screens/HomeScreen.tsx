@@ -47,6 +47,13 @@ const modules: ModuleDefinition[] = [
     description: 'Identificá manga, anime y más',
     route: 'SourceFinder',
   },
+  {
+    id: 'gallery',
+    name: 'Galería',
+    icon: 'photo-library',
+    description: 'Tu galería privada',
+    route: 'Gallery',
+  },
 ];
 
 function ModuleCard({module, onPress}: {module: ModuleDefinition; onPress: () => void}) {
