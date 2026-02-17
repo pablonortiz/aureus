@@ -19,6 +19,7 @@ class MainApplication : Application(), ReactApplication {
           add(SecureScreenPackage())
           add(VaultImportPackage())
           add(GalleryPickerPackage())
+          add(ShareReceiverPackage())
         },
     )
   }
