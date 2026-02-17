@@ -51,10 +51,10 @@ const quickActions = [
     params: undefined,
   },
   {
-    icon: 'photo-library',
-    label: 'Galería',
+    icon: 'calculate',
+    label: 'Calculadora',
     color: '#8b5cf6',
-    route: 'Gallery' as const,
+    route: 'Calculator' as const,
     params: undefined,
   },
 ];

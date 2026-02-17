@@ -48,11 +48,11 @@ const modules: ModuleDefinition[] = [
     route: 'SourceFinder',
   },
   {
-    id: 'gallery',
-    name: 'Galería',
-    icon: 'photo-library',
-    description: 'Tu galería privada',
-    route: 'Gallery',
+    id: 'calculator',
+    name: 'Calculadora',
+    icon: 'calculate',
+    description: 'Calculadora',
+    route: 'Calculator',
   },
 ];
 

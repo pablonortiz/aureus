@@ -8,6 +8,13 @@ import type {
 } from '../../../core/types';
 import type {Asset} from 'react-native-image-picker';
 
+function normalizeText(text: string): string {
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
 interface GalleryState {
   // Auth
   isUnlocked: boolean;
@@ -25,6 +32,8 @@ interface GalleryState {
   currentFolderId: number | null;
   filterCategoryId: number | null;
   showFavoritesOnly: boolean;
+  searchQuery: string;
+  sortBy: 'date' | 'size';
   loading: boolean;
 
   // Actions - Auth
@@ -78,6 +87,8 @@ export const useGalleryStore = create<GalleryState>((set, get) => ({
   currentFolderId: null,
   filterCategoryId: null,
   showFavoritesOnly: false,
+  searchQuery: '',
+  sortBy: 'date',
   loading: false,
 
   checkPin: async () => {
@@ -190,7 +201,7 @@ export const useGalleryStore = create<GalleryState>((set, get) => ({
   loadMedia: async (folderId) => {
     set({loading: true});
     const db = getDatabase();
-    const {filterCategoryId, showFavoritesOnly} = get();
+    const {filterCategoryId, showFavoritesOnly, searchQuery, sortBy} = get();
     const actualFolderId = folderId !== undefined ? folderId : get().currentFolderId;
 
     let query = `
@@ -214,7 +225,14 @@ export const useGalleryStore = create<GalleryState>((set, get) => ({
       params.push(filterCategoryId);
     }
 
-    query += ' ORDER BY gm.created_at DESC';
+    if (searchQuery.trim()) {
+      query += ' AND gm.notes_normalized LIKE ?';
+      params.push(`%${normalizeText(searchQuery.trim())}%`);
+    }
+
+    query += sortBy === 'size'
+      ? ' ORDER BY gm.file_size DESC'
+      : ' ORDER BY gm.created_at DESC';
 
     const result = await db.execute(query, params);
 
@@ -362,10 +380,11 @@ export const useGalleryStore = create<GalleryState>((set, get) => ({
 
   updateNotes: async (id, notes) => {
     const db = getDatabase();
-    await db.execute('UPDATE gallery_media SET notes = ? WHERE id = ?', [
-      notes,
-      id,
-    ]);
+    const normalized = notes ? normalizeText(notes) : null;
+    await db.execute(
+      'UPDATE gallery_media SET notes = ?, notes_normalized = ? WHERE id = ?',
+      [notes, normalized, id],
+    );
     await get().loadMedia();
   },
 

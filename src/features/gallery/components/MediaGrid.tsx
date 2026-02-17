@@ -1,5 +1,6 @@
 import React from 'react';
 import {StyleSheet, FlatList, useWindowDimensions, View, Text} from 'react-native';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {colors, fontFamily} from '../../../core/theme';
 import {Icon} from '../../../core/components';
 import {MediaThumbnail} from './MediaThumbnail';
@@ -24,6 +25,7 @@ export function MediaGrid({
   onLongPress,
 }: MediaGridProps) {
   const {width} = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const itemSize = (width - GRID_GAP * (NUM_COLUMNS - 1)) / NUM_COLUMNS;
 
   if (media.length === 0) {
@@ -43,7 +45,7 @@ export function MediaGrid({
       data={media}
       numColumns={NUM_COLUMNS}
       keyExtractor={item => item.id.toString()}
-      contentContainerStyle={styles.grid}
+      contentContainerStyle={[styles.grid, {paddingBottom: 120 + insets.bottom}]}
       columnWrapperStyle={styles.row}
       showsVerticalScrollIndicator={false}
       renderItem={({item}) => (
@@ -61,9 +63,7 @@ export function MediaGrid({
 }
 
 const styles = StyleSheet.create({
-  grid: {
-    paddingBottom: 120,
-  },
+  grid: {},
   row: {
     gap: GRID_GAP,
     marginBottom: GRID_GAP,

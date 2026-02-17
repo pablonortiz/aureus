@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useRef} from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {
   StyleSheet,
   View,
@@ -17,6 +17,7 @@ import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {launchCamera} from 'react-native-image-picker';
 import {colors, fontFamily, borderRadius} from '../../../core/theme';
 import {Icon, PinLock} from '../../../core/components';
+import {getDatabase} from '../../../core/database';
 import {GalleryHeader} from '../components/GalleryHeader';
 import {FolderCard} from '../components/FolderCard';
 import {MediaGrid} from '../components/MediaGrid';
@@ -41,6 +42,8 @@ export function GalleryScreen() {
     selectionMode,
     filterCategoryId,
     showFavoritesOnly,
+    searchQuery,
+    sortBy,
     loading,
     checkPin,
     unlock,
@@ -60,10 +63,15 @@ export function GalleryScreen() {
     cleanupExpiredTrash,
   } = useGalleryStore();
 
-  const [showNewFolder, setShowNewFolder] = React.useState(false);
-  const [newFolderName, setNewFolderName] = React.useState('');
-  const [showImportMenu, setShowImportMenu] = React.useState(false);
-  const [showMoveModal, setShowMoveModal] = React.useState(false);
+  const [showNewFolder, setShowNewFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
+  const [showImportMenu, setShowImportMenu] = useState(false);
+  const [showMoveModal, setShowMoveModal] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [localSearch, setLocalSearch] = useState('');
+  const [showSecretCodeModal, setShowSecretCodeModal] = useState(false);
+  const [secretCodeInput, setSecretCodeInput] = useState('');
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isImportingRef = useRef(false);
 
   // Check PIN on mount
@@ -210,6 +218,48 @@ export function GalleryScreen() {
     loadMedia();
   };
 
+  const handleSearchChange = (text: string) => {
+    setLocalSearch(text);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      useGalleryStore.setState({searchQuery: text});
+      loadMedia();
+    }, 300);
+  };
+
+  const handleClearSearch = () => {
+    setLocalSearch('');
+    useGalleryStore.setState({searchQuery: ''});
+    setShowSearch(false);
+    loadMedia();
+  };
+
+  const handleSortChange = (sort: 'date' | 'size') => {
+    useGalleryStore.setState({sortBy: sort});
+    loadMedia();
+  };
+
+  const handleOpenSecretSettings = async () => {
+    const db = getDatabase();
+    const result = await db.execute(
+      "SELECT value FROM app_settings WHERE key = 'gallery_secret_code'",
+    );
+    setSecretCodeInput(result.rows.length > 0 ? (result.rows[0].value as string) : '1234');
+    setShowSecretCodeModal(true);
+  };
+
+  const handleSaveSecretCode = async () => {
+    const code = secretCodeInput.trim();
+    if (!code) return;
+    const db = getDatabase();
+    await db.execute(
+      "INSERT OR REPLACE INTO app_settings (key, value) VALUES ('gallery_secret_code', ?)",
+      [code],
+    );
+    setShowSecretCodeModal(false);
+    Alert.alert('Código actualizado', `El nuevo código secreto es: ${code}`);
+  };
+
   // PIN gate
   if (!isUnlocked) {
     return (
@@ -238,10 +288,32 @@ export function GalleryScreen() {
         title="Galería"
         onBack={() => navigation.goBack()}
         rightActions={[
+          {icon: 'search', onPress: () => setShowSearch(s => !s)},
           {icon: 'label', onPress: () => navigation.navigate('ManageGalleryCategories')},
           {icon: 'delete', onPress: () => navigation.navigate('GalleryTrash')},
+          {icon: 'settings', onPress: handleOpenSecretSettings},
         ]}
       />
+
+      {/* Search bar */}
+      {showSearch && (
+        <View style={styles.searchBar}>
+          <Icon name="search" size={18} color={colors.textMuted} />
+          <TextInput
+            style={styles.searchInput}
+            value={localSearch}
+            onChangeText={handleSearchChange}
+            placeholder="Buscar por notas..."
+            placeholderTextColor={colors.textMuted}
+            autoFocus
+          />
+          {localSearch.length > 0 && (
+            <Pressable onPress={handleClearSearch}>
+              <Icon name="close" size={18} color={colors.textSecondary} />
+            </Pressable>
+          )}
+        </View>
+      )}
 
       {/* Folders row */}
       <View style={styles.foldersSection}>
@@ -323,6 +395,21 @@ export function GalleryScreen() {
               ]}>
               Favoritos
             </Text>
+          </Pressable>
+
+          {/* Sort chips */}
+          <View style={styles.sortDivider} />
+          <Pressable
+            onPress={() => handleSortChange('date')}
+            style={[styles.sortChip, sortBy === 'date' && styles.sortChipActive]}>
+            <Icon name="schedule" size={14} color={sortBy === 'date' ? colors.primary : colors.textMuted} />
+            <Text style={[styles.sortChipText, sortBy === 'date' && styles.sortChipTextActive]}>Recientes</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => handleSortChange('size')}
+            style={[styles.sortChip, sortBy === 'size' && styles.sortChipActive]}>
+            <Icon name="storage" size={14} color={sortBy === 'size' ? colors.primary : colors.textMuted} />
+            <Text style={[styles.sortChipText, sortBy === 'size' && styles.sortChipTextActive]}>Tamaño</Text>
           </Pressable>
 
           {categories.map(cat => (
@@ -420,6 +507,43 @@ export function GalleryScreen() {
         </Pressable>
       </Modal>
 
+      {/* Secret code settings modal */}
+      <Modal visible={showSecretCodeModal} transparent animationType="fade">
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setShowSecretCodeModal(false)}>
+          <View style={styles.dialogBox}>
+            <Text style={styles.dialogTitle}>Código secreto</Text>
+            <Text style={styles.secretCodeHint}>
+              Resultado de la calculadora que abre la galería
+            </Text>
+            <TextInput
+              style={styles.dialogInput}
+              value={secretCodeInput}
+              onChangeText={setSecretCodeInput}
+              placeholder="Ej: 1234"
+              placeholderTextColor={colors.textMuted}
+              keyboardType="numeric"
+              autoFocus
+            />
+            <View style={styles.dialogActions}>
+              <Pressable
+                onPress={() => setShowSecretCodeModal(false)}
+                style={styles.dialogBtn}>
+                <Text style={styles.dialogBtnText}>Cancelar</Text>
+              </Pressable>
+              <Pressable
+                onPress={handleSaveSecretCode}
+                style={[styles.dialogBtn, styles.dialogBtnPrimary]}>
+                <Text style={[styles.dialogBtnText, {color: colors.backgroundDark}]}>
+                  Guardar
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </Pressable>
+      </Modal>
+
       {/* Move to folder modal */}
       <Modal visible={showMoveModal} transparent animationType="fade">
         <Pressable
@@ -454,6 +578,57 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.backgroundDark,
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surfaceDark,
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 4,
+    borderRadius: borderRadius.md,
+    paddingHorizontal: 12,
+    height: 40,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: colors.borderGold,
+  },
+  searchInput: {
+    flex: 1,
+    fontFamily: fontFamily.regular,
+    fontSize: 14,
+    color: colors.textPrimary,
+    paddingVertical: 0,
+  },
+  sortDivider: {
+    width: 1,
+    height: 20,
+    backgroundColor: colors.borderSubtle,
+    marginHorizontal: 2,
+  },
+  sortChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: borderRadius.full,
+    borderWidth: 1,
+    borderColor: 'transparent',
+    backgroundColor: colors.surfaceDark,
+    height: 32,
+  },
+  sortChipActive: {
+    borderColor: colors.borderGold,
+    backgroundColor: colors.primaryLight,
+  },
+  sortChipText: {
+    fontFamily: fontFamily.semiBold,
+    fontSize: 12,
+    color: colors.textMuted,
+  },
+  sortChipTextActive: {
+    color: colors.primary,
   },
   foldersSection: {
     paddingVertical: 12,
@@ -580,6 +755,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: colors.textPrimary,
     marginBottom: 16,
+  },
+  secretCodeHint: {
+    fontFamily: fontFamily.regular,
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginBottom: 12,
   },
   dialogInput: {
     backgroundColor: colors.surfaceDark,

@@ -13,7 +13,7 @@ const allModules = [
   {id: 'focus', name: 'Enfoque', icon: 'timer', desc: 'Sesiones de trabajo profundo', route: 'Focus'},
   {id: 'finance', name: 'Finanzas', icon: 'account-balance-wallet', desc: 'Balance y transacciones', route: 'Finance'},
   {id: 'source-finder', name: 'Buscador de Fuentes', icon: 'image-search', desc: 'Identificá manga, anime y más', route: 'SourceFinder'},
-  {id: 'gallery', name: 'Galería Oculta', icon: 'photo-library', desc: 'Tu galería privada y protegida', route: 'Gallery'},
+  {id: 'calculator', name: 'Calculadora', icon: 'calculate', desc: 'Calculadora estándar', route: 'Calculator'},
 ];
 
 export function ModulesScreen() {

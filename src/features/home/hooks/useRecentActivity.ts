@@ -141,25 +141,6 @@ export function useRecentActivity(limit = 6) {
         });
       }
 
-      // Gallery: recent imports
-      const galleryResult = await db.execute(
-        `SELECT id, original_name, media_type, created_at FROM gallery_media
-         WHERE trashed_at IS NULL
-         ORDER BY created_at DESC LIMIT ?`,
-        [limit],
-      );
-      for (const row of galleryResult.rows) {
-        const mType = row.media_type === 'video' ? 'Video' : 'Imagen';
-        items.push({
-          id: `gallery-${row.id}`,
-          title: row.original_name as string,
-          module: 'Galería',
-          icon: 'photo-library',
-          status: mType,
-          timestamp: row.created_at as string,
-        });
-      }
-
       // Gmail: recent accounts
       const gmailResult = await db.execute(
         `SELECT id, email_prefix, created_at FROM gmail_accounts

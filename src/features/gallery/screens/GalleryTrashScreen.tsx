@@ -121,7 +121,7 @@ export function GalleryTrashScreen() {
         <FlatList
           data={trashedMedia}
           keyExtractor={item => item.id.toString()}
-          contentContainerStyle={styles.list}
+          contentContainerStyle={[styles.list, {paddingBottom: 16 + insets.bottom}]}
           renderItem={({item}) => {
             const days = daysRemaining(item.trashed_at || '');
             const uri =

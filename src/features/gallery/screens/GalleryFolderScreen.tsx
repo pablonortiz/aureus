@@ -1,5 +1,5 @@
-import React, {useCallback, useEffect, useRef} from 'react';
-import {StyleSheet, View, ScrollView, Alert, Text, Pressable, NativeModules} from 'react-native';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
+import {StyleSheet, View, ScrollView, Alert, Text, Pressable, TextInput, NativeModules} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useNavigation, useRoute, useFocusEffect} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
@@ -22,6 +22,9 @@ export function GalleryFolderScreen() {
   const {folderId, folderName} = route.params;
   const insets = useSafeAreaInsets();
   const isImportingRef = useRef(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [localSearch, setLocalSearch] = useState('');
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const {
     media,
@@ -31,6 +34,8 @@ export function GalleryFolderScreen() {
     isUnlocked,
     filterCategoryId,
     showFavoritesOnly,
+    searchQuery,
+    sortBy,
     loadMedia,
     loadCategories,
     importFromPicker,
@@ -136,6 +141,27 @@ export function GalleryFolderScreen() {
     loadMedia(folderId);
   };
 
+  const handleSearchChange = (text: string) => {
+    setLocalSearch(text);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      useGalleryStore.setState({searchQuery: text});
+      loadMedia(folderId);
+    }, 300);
+  };
+
+  const handleClearSearch = () => {
+    setLocalSearch('');
+    useGalleryStore.setState({searchQuery: ''});
+    setShowSearch(false);
+    loadMedia(folderId);
+  };
+
+  const handleSortChange = (sort: 'date' | 'size') => {
+    useGalleryStore.setState({sortBy: sort});
+    loadMedia(folderId);
+  };
+
   return (
     <View style={styles.container}>
       <GalleryHeader
@@ -144,7 +170,30 @@ export function GalleryFolderScreen() {
           useGalleryStore.setState({currentFolderId: null});
           navigation.goBack();
         }}
+        rightActions={[
+          {icon: 'search', onPress: () => setShowSearch(s => !s)},
+        ]}
       />
+
+      {/* Search bar */}
+      {showSearch && (
+        <View style={styles.searchBar}>
+          <Icon name="search" size={18} color={colors.textMuted} />
+          <TextInput
+            style={styles.searchInput}
+            value={localSearch}
+            onChangeText={handleSearchChange}
+            placeholder="Buscar por notas..."
+            placeholderTextColor={colors.textMuted}
+            autoFocus
+          />
+          {localSearch.length > 0 && (
+            <Pressable onPress={handleClearSearch}>
+              <Icon name="close" size={18} color={colors.textSecondary} />
+            </Pressable>
+          )}
+        </View>
+      )}
 
       {/* Category filters */}
       <View style={styles.filtersSection}>
@@ -170,6 +219,21 @@ export function GalleryFolderScreen() {
               ]}>
               Favoritos
             </Text>
+          </Pressable>
+
+          {/* Sort chips */}
+          <View style={styles.sortDivider} />
+          <Pressable
+            onPress={() => handleSortChange('date')}
+            style={[styles.sortChip, sortBy === 'date' && styles.sortChipActive]}>
+            <Icon name="schedule" size={14} color={sortBy === 'date' ? colors.primary : colors.textMuted} />
+            <Text style={[styles.sortChipText, sortBy === 'date' && styles.sortChipTextActive]}>Recientes</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => handleSortChange('size')}
+            style={[styles.sortChip, sortBy === 'size' && styles.sortChipActive]}>
+            <Icon name="storage" size={14} color={sortBy === 'size' ? colors.primary : colors.textMuted} />
+            <Text style={[styles.sortChipText, sortBy === 'size' && styles.sortChipTextActive]}>Tamaño</Text>
           </Pressable>
 
           {categories.map(cat => (
@@ -218,6 +282,57 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.backgroundDark,
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surfaceDark,
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 4,
+    borderRadius: borderRadius.md,
+    paddingHorizontal: 12,
+    height: 40,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: colors.borderGold,
+  },
+  searchInput: {
+    flex: 1,
+    fontFamily: fontFamily.regular,
+    fontSize: 14,
+    color: colors.textPrimary,
+    paddingVertical: 0,
+  },
+  sortDivider: {
+    width: 1,
+    height: 20,
+    backgroundColor: colors.borderSubtle,
+    marginHorizontal: 2,
+  },
+  sortChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: borderRadius.full,
+    borderWidth: 1,
+    borderColor: 'transparent',
+    backgroundColor: colors.surfaceDark,
+    height: 32,
+  },
+  sortChipActive: {
+    borderColor: colors.borderGold,
+    backgroundColor: colors.primaryLight,
+  },
+  sortChipText: {
+    fontFamily: fontFamily.semiBold,
+    fontSize: 12,
+    color: colors.textMuted,
+  },
+  sortChipTextActive: {
+    color: colors.primary,
   },
   filtersSection: {
     paddingBottom: 12,

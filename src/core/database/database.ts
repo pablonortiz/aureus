@@ -352,6 +352,35 @@ function runMigrations(database: DB): void {
     }
   }
 
+  // Gallery: add notes_normalized column (idempotent)
+  try {
+    database.executeSync(
+      'ALTER TABLE gallery_media ADD COLUMN notes_normalized TEXT',
+    );
+  } catch (_e) {
+    // Column already exists
+  }
+
+  // Backfill notes_normalized for existing rows
+  const notesRows = database.executeSync(
+    'SELECT id, notes FROM gallery_media WHERE notes IS NOT NULL AND notes_normalized IS NULL',
+  );
+  for (const row of notesRows.rows) {
+    const normalized = (row.notes as string)
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase();
+    database.executeSync(
+      'UPDATE gallery_media SET notes_normalized = ? WHERE id = ?',
+      [normalized, row.id],
+    );
+  }
+
+  // Seed default gallery secret code
+  database.executeSync(
+    "INSERT OR IGNORE INTO app_settings (key, value) VALUES ('gallery_secret_code', '1234')",
+  );
+
   // Migrate clipboard_pin → app_pin (one-time)
   database.executeSync(
     "UPDATE app_settings SET key = 'app_pin' WHERE key = 'clipboard_pin'",

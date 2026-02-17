@@ -28,6 +28,7 @@ export type RootStackParamList = {
   AddRecurring: {recurringId?: number} | undefined;
   SourceFinder: undefined;
   SearchResult: {searchId: number};
+  Calculator: undefined;
   Gallery: undefined;
   GalleryFolder: {folderId: number; folderName: string};
   MediaViewer: {mediaId: number};
