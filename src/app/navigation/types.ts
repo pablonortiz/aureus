@@ -34,6 +34,9 @@ export type RootStackParamList = {
   MediaViewer: {mediaId: number};
   ManageGalleryCategories: undefined;
   GalleryTrash: undefined;
+  Radar: undefined;
+  RadarResults: {searchId: number};
+  RadarSaved: {searchId: number};
 };
 
 export type MainTabParamList = {

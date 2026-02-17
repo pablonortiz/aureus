@@ -54,6 +54,13 @@ const modules: ModuleDefinition[] = [
     description: 'Calculadora',
     route: 'Calculator',
   },
+  {
+    id: 'radar',
+    name: 'Radar',
+    icon: 'radar',
+    description: 'Búsqueda en tiempo real',
+    route: 'Radar',
+  },
 ];
 
 function ModuleCard({module, onPress}: {module: ModuleDefinition; onPress: () => void}) {

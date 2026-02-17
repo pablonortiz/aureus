@@ -26,6 +26,9 @@ import {GalleryFolderScreen} from '../../features/gallery/screens/GalleryFolderS
 import {MediaViewerScreen} from '../../features/gallery/screens/MediaViewerScreen';
 import {ManageGalleryCategoriesScreen} from '../../features/gallery/screens/ManageGalleryCategoriesScreen';
 import {GalleryTrashScreen} from '../../features/gallery/screens/GalleryTrashScreen';
+import {RadarScreen} from '../../features/radar/screens/RadarScreen';
+import {RadarResultsScreen} from '../../features/radar/screens/RadarResultsScreen';
+import {RadarSavedScreen} from '../../features/radar/screens/RadarSavedScreen';
 import type {RootStackParamList} from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -80,6 +83,9 @@ export function RootNavigator() {
         <Stack.Screen name="MediaViewer" component={MediaViewerScreen} />
         <Stack.Screen name="ManageGalleryCategories" component={ManageGalleryCategoriesScreen} />
         <Stack.Screen name="GalleryTrash" component={GalleryTrashScreen} />
+        <Stack.Screen name="Radar" component={RadarScreen} />
+        <Stack.Screen name="RadarResults" component={RadarResultsScreen} />
+        <Stack.Screen name="RadarSaved" component={RadarSavedScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

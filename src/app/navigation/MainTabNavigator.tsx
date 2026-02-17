@@ -57,6 +57,13 @@ const quickActions = [
     route: 'Calculator' as const,
     params: undefined,
   },
+  {
+    icon: 'radar',
+    label: 'Radar',
+    color: '#06b6d4',
+    route: 'Radar' as const,
+    params: undefined,
+  },
 ];
 
 function FABButton() {

@@ -291,6 +291,11 @@ export function SettingsScreen() {
                 label="Galería"
                 value={`${storageStats.galleryMedia} archivos · ${storageStats.galleryFolders} carpetas`}
               />
+              <StatRow
+                icon="radar"
+                label="Radar"
+                value={`${storageStats.radarSearches} búsquedas · ${storageStats.radarQueries} queries`}
+              />
             </View>
             <View style={styles.totalRow}>
               <Text style={styles.totalLabel}>Total</Text>

@@ -9,6 +9,7 @@ export interface ProfileStats {
   tasksCompletedToday: number;
   searches: number;
   galleryItems: number;
+  radarSearches: number;
 }
 
 export interface UsageSummary {
@@ -20,13 +21,14 @@ export interface UsageSummary {
 
 export function useProfileStats() {
   const [stats, setStats] = useState<ProfileStats>({
-    modules: 6,
+    modules: 8,
     links: 0,
     accounts: 0,
     monthExpenses: 0,
     tasksCompletedToday: 0,
     searches: 0,
     galleryItems: 0,
+    radarSearches: 0,
   });
   const [usage, setUsage] = useState<UsageSummary>({
     streakDays: 0,
@@ -88,14 +90,21 @@ export function useProfileStats() {
       );
       const galleryCount = (galleryResult.rows[0].count as number) || 0;
 
+      // Radar searches
+      const radarResult = await db.execute(
+        'SELECT COUNT(*) as count FROM radar_searches',
+      );
+      const radarCount = (radarResult.rows[0].count as number) || 0;
+
       setStats({
-        modules: 6,
+        modules: 8,
         links: linksCount,
         accounts: accountsCount,
         monthExpenses,
         tasksCompletedToday: tasksToday,
         searches: searchesCount,
         galleryItems: galleryCount,
+        radarSearches: radarCount,
       });
 
       // --- Usage Summary ---
@@ -137,11 +146,16 @@ export function useProfileStats() {
         'SELECT COUNT(*) as count FROM gallery_media WHERE created_at >= ?',
         [mondayStr],
       );
+      const weekRadar = await db.execute(
+        'SELECT COUNT(*) as count FROM radar_searches WHERE created_at >= ?',
+        [mondayStr],
+      );
       const itemsThisWeek =
         ((weekLinks.rows[0].count as number) || 0) +
         ((weekTx.rows[0].count as number) || 0) +
         ((weekSearches.rows[0].count as number) || 0) +
-        ((weekGallery.rows[0].count as number) || 0);
+        ((weekGallery.rows[0].count as number) || 0) +
+        ((weekRadar.rows[0].count as number) || 0);
 
       // Streak: consecutive days with any activity (going backwards from today)
       let streak = 0;
@@ -160,9 +174,11 @@ export function useProfileStats() {
             (SELECT COUNT(*) FROM focus_tasks WHERE created_at >= ? AND created_at < ?) +
             (SELECT COUNT(*) FROM gmail_accounts WHERE created_at >= ? AND created_at < ?) +
             (SELECT COUNT(*) FROM source_finder_searches WHERE created_at >= ? AND created_at < ?) +
-            (SELECT COUNT(*) FROM gallery_media WHERE created_at >= ? AND created_at < ?)
+            (SELECT COUNT(*) FROM gallery_media WHERE created_at >= ? AND created_at < ?) +
+            (SELECT COUNT(*) FROM radar_searches WHERE created_at >= ? AND created_at < ?)
             as total`,
           [
+            dateStr, nextDateStr,
             dateStr, nextDateStr,
             dateStr, nextDateStr,
             dateStr, nextDateStr,

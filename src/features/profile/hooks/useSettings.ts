@@ -15,6 +15,8 @@ export interface StorageStats {
   sourceResults: number;
   galleryMedia: number;
   galleryFolders: number;
+  radarSearches: number;
+  radarQueries: number;
   totalRecords: number;
 }
 
@@ -58,6 +60,8 @@ export function useSettings() {
         db.execute('SELECT COUNT(*) as count FROM source_finder_results'),
         db.execute('SELECT COUNT(*) as count FROM gallery_media'),
         db.execute('SELECT COUNT(*) as count FROM gallery_folders'),
+        db.execute('SELECT COUNT(*) as count FROM radar_searches'),
+        db.execute('SELECT COUNT(*) as count FROM radar_queries'),
       ]);
 
       const values = counts.map(r => (r.rows[0].count as number) || 0);
@@ -77,6 +81,8 @@ export function useSettings() {
         sourceResults: values[10],
         galleryMedia: values[11],
         galleryFolders: values[12],
+        radarSearches: values[13],
+        radarQueries: values[14],
         totalRecords: total,
       });
     } catch {

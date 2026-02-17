@@ -381,6 +381,32 @@ function runMigrations(database: DB): void {
     "INSERT OR IGNORE INTO app_settings (key, value) VALUES ('gallery_secret_code', '1234')",
   );
 
+  // Radar module
+  database.executeSync(`
+    CREATE TABLE IF NOT EXISTS radar_searches (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      query TEXT NOT NULL,
+      keywords TEXT,
+      tip TEXT,
+      is_saved INTEGER DEFAULT 0,
+      notes TEXT,
+      query_count INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+  `);
+
+  database.executeSync(`
+    CREATE TABLE IF NOT EXISTS radar_queries (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      search_id INTEGER NOT NULL REFERENCES radar_searches(id) ON DELETE CASCADE,
+      platform TEXT NOT NULL,
+      query_text TEXT NOT NULL,
+      description TEXT,
+      launch_url TEXT NOT NULL,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+  `);
+
   // Migrate clipboard_pin → app_pin (one-time)
   database.executeSync(
     "UPDATE app_settings SET key = 'app_pin' WHERE key = 'clipboard_pin'",

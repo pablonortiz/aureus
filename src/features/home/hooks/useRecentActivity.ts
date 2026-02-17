@@ -141,6 +141,23 @@ export function useRecentActivity(limit = 6) {
         });
       }
 
+      // Radar: recent searches
+      const radarResult = await db.execute(
+        `SELECT id, query, query_count, created_at FROM radar_searches
+         ORDER BY created_at DESC LIMIT ?`,
+        [limit],
+      );
+      for (const row of radarResult.rows) {
+        items.push({
+          id: `radar-${row.id}`,
+          title: row.query as string,
+          module: 'Radar',
+          icon: 'radar',
+          status: `${row.query_count} queries`,
+          timestamp: row.created_at as string,
+        });
+      }
+
       // Gmail: recent accounts
       const gmailResult = await db.execute(
         `SELECT id, email_prefix, created_at FROM gmail_accounts

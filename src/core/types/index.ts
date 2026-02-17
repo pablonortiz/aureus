@@ -185,6 +185,28 @@ export interface GalleryCategory {
   created_at: string;
 }
 
+// Radar module types
+export interface RadarSearch {
+  id: number;
+  query: string;
+  keywords: string | null;
+  tip: string | null;
+  is_saved: boolean;
+  notes: string | null;
+  query_count: number;
+  created_at: string;
+}
+
+export interface RadarQuery {
+  id: number;
+  search_id: number;
+  platform: string;
+  query_text: string;
+  description: string | null;
+  launch_url: string;
+  created_at: string;
+}
+
 // Module definition for the dashboard
 export interface ModuleDefinition {
   id: string;

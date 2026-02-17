@@ -14,6 +14,7 @@ const allModules = [
   {id: 'finance', name: 'Finanzas', icon: 'account-balance-wallet', desc: 'Balance y transacciones', route: 'Finance'},
   {id: 'source-finder', name: 'Buscador de Fuentes', icon: 'image-search', desc: 'Identificá manga, anime y más', route: 'SourceFinder'},
   {id: 'calculator', name: 'Calculadora', icon: 'calculate', desc: 'Calculadora estándar', route: 'Calculator'},
+  {id: 'radar', name: 'Radar', icon: 'radar', desc: 'Búsqueda inteligente en tiempo real', route: 'Radar'},
 ];
 
 export function ModulesScreen() {
