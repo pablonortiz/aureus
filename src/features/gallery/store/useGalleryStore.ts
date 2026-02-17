@@ -35,6 +35,7 @@ interface GalleryState {
   searchQuery: string;
   sortBy: 'date' | 'size';
   loading: boolean;
+  importToast: {visible: boolean; message: string} | null;
 
   // Actions - Auth
   checkPin: () => Promise<void>;
@@ -90,6 +91,7 @@ export const useGalleryStore = create<GalleryState>((set, get) => ({
   searchQuery: '',
   sortBy: 'date',
   loading: false,
+  importToast: null,
 
   checkPin: async () => {
     const db = getDatabase();
@@ -295,9 +297,16 @@ export const useGalleryStore = create<GalleryState>((set, get) => ({
     const db = getDatabase();
     const {currentFolderId} = get();
 
+    set({importToast: {visible: true, message: 'Importando...'}});
+
     // Native picker: opens file picker, copies to vault, deletes originals
     const files = await vaultService.pickAndImport();
-    if (files.length === 0) return true;
+    if (files.length === 0) {
+      set({importToast: null});
+      return true;
+    }
+
+    set({importToast: {visible: true, message: `Guardando ${files.length} archivo(s)...`}});
 
     let allDeleted = true;
     for (const file of files) {
@@ -319,23 +328,28 @@ export const useGalleryStore = create<GalleryState>((set, get) => ({
     }
 
     await get().loadMedia();
+    set({importToast: {visible: true, message: `${files.length} archivo(s) importado(s)`}});
+    setTimeout(() => set({importToast: null}), 2000);
     return allDeleted;
   },
 
   importFromCamera: async (assets) => {
     const db = getDatabase();
     const {currentFolderId} = get();
+    const validAssets = assets.filter(a => a.uri);
 
-    for (const asset of assets) {
-      if (!asset.uri) continue;
+    if (validAssets.length === 0) return;
 
+    set({importToast: {visible: true, message: `Importando ${validAssets.length} archivo(s)...`}});
+
+    for (const asset of validAssets) {
       const mediaType: 'image' | 'video' =
         asset.type?.startsWith('video') ? 'video' : 'image';
       const originalName =
         asset.fileName || `media_${Date.now()}.${mediaType === 'video' ? 'mp4' : 'jpg'}`;
 
       const {filename, vaultPath, fileSize} =
-        await vaultService.importFromCamera(asset.uri, mediaType, originalName);
+        await vaultService.importFromCamera(asset.uri!, mediaType, originalName);
 
       await db.execute(
         `INSERT INTO gallery_media
@@ -356,6 +370,8 @@ export const useGalleryStore = create<GalleryState>((set, get) => ({
     }
 
     await get().loadMedia();
+    set({importToast: {visible: true, message: `${validAssets.length} archivo(s) importado(s)`}});
+    setTimeout(() => set({importToast: null}), 2000);
   },
 
   moveMedia: async (mediaIds, folderId) => {

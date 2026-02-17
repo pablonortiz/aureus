@@ -1,5 +1,5 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react';
-import {StyleSheet, View, ScrollView, Alert, Text, Pressable, TextInput, NativeModules} from 'react-native';
+import {StyleSheet, View, ScrollView, Alert, Text, Pressable, TextInput, NativeModules, AppState} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useNavigation, useRoute, useFocusEffect} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
@@ -10,6 +10,7 @@ import {GalleryHeader} from '../components/GalleryHeader';
 import {MediaGrid} from '../components/MediaGrid';
 import {SelectionBar} from '../components/SelectionBar';
 import {CategoryBadge} from '../components/CategoryBadge';
+import {ImportToast} from '../components/ImportToast';
 import {useGalleryStore} from '../store/useGalleryStore';
 import type {RootStackParamList} from '../../../app/navigation/types';
 import type {GalleryMedia} from '../../../core/types';
@@ -45,6 +46,7 @@ export function GalleryFolderScreen() {
     moveMedia,
     folders,
     loadFolders,
+    lock,
     toggleSelection,
     clearSelection,
   } = useGalleryStore();
@@ -86,6 +88,10 @@ export function GalleryFolderScreen() {
       }
     } finally {
       isImportingRef.current = false;
+      SecureScreen.enable(); // Re-apply after picker Activity
+      if (AppState.currentState !== 'active') {
+        lock();
+      }
     }
   };
 
@@ -254,7 +260,10 @@ export function GalleryFolderScreen() {
         selectionMode={selectionMode}
         onPress={handleMediaPress}
         onLongPress={(item: GalleryMedia) => toggleSelection(item.id)}
+        onDragSelect={id => toggleSelection(id)}
       />
+
+      <ImportToast />
 
       {selectionMode && (
         <SelectionBar

@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useCallback} from 'react';
+import React, {useState, useEffect, useCallback, useRef} from 'react';
 import {
   StyleSheet,
   View,
@@ -7,10 +7,11 @@ import {
   Pressable,
   Alert,
   Dimensions,
-  ScrollView,
+  FlatList,
   TextInput,
   Modal,
   NativeModules,
+  type ViewToken,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useNavigation, useRoute} from '@react-navigation/native';
@@ -20,6 +21,7 @@ import Video from 'react-native-video';
 import {colors, fontFamily, borderRadius} from '../../../core/theme';
 import {Icon} from '../../../core/components';
 import {vaultService} from '../services/vaultService';
+import {ZoomableView} from '../components/ZoomableView';
 import {useGalleryStore} from '../store/useGalleryStore';
 import type {RootStackParamList} from '../../../app/navigation/types';
 import type {GalleryMedia, GalleryCategory} from '../../../core/types';
@@ -68,22 +70,55 @@ export function MediaViewerScreen() {
   }, [isUnlocked, navigation]);
 
   const [showUI, setShowUI] = useState(true);
+  const autoHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showInfo, setShowInfo] = useState(false);
   const [showCatModal, setShowCatModal] = useState(false);
   const [editingNotes, setEditingNotes] = useState(false);
   const [notesText, setNotesText] = useState('');
   const [mediaCategoryIds, setMediaCategoryIds] = useState<number[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [currentIndex, setCurrentIndex] = useState(() => {
+    const idx = media.findIndex(m => m.id === mediaId);
+    return idx >= 0 ? idx : 0;
+  });
+  const pagerRef = useRef<FlatList>(null);
+  const isUserSwipingRef = useRef(false);
+  const [isZoomed, setIsZoomed] = useState(false);
+
+  const handleToggleUI = useCallback(() => setShowUI(prev => !prev), []);
+  const handleZoomChange = useCallback((zoomed: boolean) => setIsZoomed(zoomed), []);
 
   const currentMedia = media[currentIndex];
 
-  // Find current media index
+  // Sync pager when index changes from arrows
   useEffect(() => {
-    const idx = media.findIndex(m => m.id === mediaId);
-    if (idx >= 0) {
-      setCurrentIndex(idx);
+    if (!isUserSwipingRef.current && pagerRef.current && media.length > 0) {
+      pagerRef.current.scrollToIndex({index: currentIndex, animated: true});
     }
-  }, [mediaId, media]);
+    isUserSwipingRef.current = false;
+  }, [currentIndex, media.length]);
+
+  const onViewableItemsChanged = useCallback(
+    ({viewableItems}: {viewableItems: ViewToken[]}) => {
+      if (viewableItems.length > 0 && viewableItems[0].index != null) {
+        isUserSwipingRef.current = true;
+        setCurrentIndex(viewableItems[0].index);
+      }
+    },
+    [],
+  );
+
+  const viewabilityConfig = useRef({
+    viewAreaCoveragePercentThreshold: 50,
+  }).current;
+
+  const getItemLayout = useCallback(
+    (_data: any, index: number) => ({
+      length: SCREEN_WIDTH,
+      offset: SCREEN_WIDTH * index,
+      index,
+    }),
+    [],
+  );
 
   // Load categories for current media
   useEffect(() => {
@@ -102,6 +137,32 @@ export function MediaViewerScreen() {
     );
     setMediaCategoryIds(result.rows.map(r => r.category_id as number));
   };
+
+  // Auto-hide overlay for videos
+  const scheduleAutoHide = useCallback(() => {
+    if (autoHideTimerRef.current) clearTimeout(autoHideTimerRef.current);
+    autoHideTimerRef.current = setTimeout(() => setShowUI(false), 3000);
+  }, []);
+
+  useEffect(() => {
+    if (currentMedia?.media_type === 'video' && showUI) {
+      scheduleAutoHide();
+    }
+    return () => {
+      if (autoHideTimerRef.current) clearTimeout(autoHideTimerRef.current);
+    };
+  }, [currentMedia?.media_type, showUI, scheduleAutoHide]);
+
+  // When switching to image, cancel timer and ensure UI visible
+  useEffect(() => {
+    if (currentMedia?.media_type === 'image') {
+      if (autoHideTimerRef.current) {
+        clearTimeout(autoHideTimerRef.current);
+        autoHideTimerRef.current = null;
+      }
+      setShowUI(true);
+    }
+  }, [currentMedia?.media_type]);
 
   const handlePrev = () => {
     if (currentIndex > 0) setCurrentIndex(currentIndex - 1);
@@ -158,24 +219,66 @@ export function MediaViewerScreen() {
     );
   }
 
-  const uri = vaultService.getFileUri(currentMedia.vault_path);
+  const renderMediaItem = useCallback(
+    ({item, index}: {item: GalleryMedia; index: number}) => {
+      const itemUri = vaultService.getFileUri(item.vault_path);
+      const active = index === currentIndex;
+
+      if (item.media_type === 'image') {
+        return (
+          <View style={styles.mediaPage}>
+            <ZoomableView
+              onTap={handleToggleUI}
+              onZoomChange={handleZoomChange}
+              isActive={active}>
+              <Image
+                source={{uri: itemUri}}
+                style={styles.fullImage}
+                resizeMode="contain"
+              />
+            </ZoomableView>
+          </View>
+        );
+      }
+
+      // Video: no onTap so native controls receive single taps
+      return (
+        <View style={styles.mediaPage}>
+          <ZoomableView
+            onZoomChange={handleZoomChange}
+            isActive={active}>
+            <Video
+              source={{uri: itemUri}}
+              style={styles.fullImage}
+              controls
+              resizeMode="contain"
+              paused={!active}
+            />
+          </ZoomableView>
+        </View>
+      );
+    },
+    [currentIndex, handleToggleUI, handleZoomChange],
+  );
 
   return (
     <View style={styles.container}>
-      {/* Media display */}
-      <Pressable style={styles.mediaContainer} onPress={() => setShowUI(!showUI)}>
-        {currentMedia.media_type === 'image' ? (
-          <Image source={{uri}} style={styles.fullImage} resizeMode="contain" />
-        ) : (
-          <Video
-            source={{uri}}
-            style={styles.fullImage}
-            controls
-            resizeMode="contain"
-            paused={false}
-          />
-        )}
-      </Pressable>
+      {/* Swipeable media pager */}
+      <FlatList
+        ref={pagerRef}
+        data={media}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        keyExtractor={item => item.id.toString()}
+        renderItem={renderMediaItem}
+        getItemLayout={getItemLayout}
+        initialScrollIndex={currentIndex}
+        onViewableItemsChanged={onViewableItemsChanged}
+        viewabilityConfig={viewabilityConfig}
+        scrollEnabled={!isZoomed}
+        style={styles.pager}
+      />
 
       {/* Top bar */}
       {showUI && (
@@ -368,8 +471,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000',
   },
-  mediaContainer: {
+  pager: {
     flex: 1,
+  },
+  mediaPage: {
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT,
     justifyContent: 'center',
     alignItems: 'center',
   },

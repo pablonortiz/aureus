@@ -22,6 +22,7 @@ import {GalleryHeader} from '../components/GalleryHeader';
 import {FolderCard} from '../components/FolderCard';
 import {MediaGrid} from '../components/MediaGrid';
 import {SelectionBar} from '../components/SelectionBar';
+import {ImportToast} from '../components/ImportToast';
 import {CategoryBadge} from '../components/CategoryBadge';
 import {useGalleryStore} from '../store/useGalleryStore';
 import type {RootStackParamList} from '../../../app/navigation/types';
@@ -136,6 +137,10 @@ export function GalleryScreen() {
       }
     } finally {
       isImportingRef.current = false;
+      SecureScreen.enable(); // Re-apply after picker Activity
+      if (AppState.currentState !== 'active') {
+        lock();
+      }
     }
   };
 
@@ -151,6 +156,10 @@ export function GalleryScreen() {
       }
     } finally {
       isImportingRef.current = false;
+      SecureScreen.enable(); // Re-apply after camera Activity
+      if (AppState.currentState !== 'active') {
+        lock();
+      }
     }
   };
 
@@ -431,7 +440,10 @@ export function GalleryScreen() {
         selectionMode={selectionMode}
         onPress={handleMediaPress}
         onLongPress={handleMediaLongPress}
+        onDragSelect={id => toggleSelection(id)}
       />
+
+      <ImportToast />
 
       {/* Selection bar */}
       {selectionMode && (

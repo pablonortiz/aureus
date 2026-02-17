@@ -75,13 +75,15 @@ export function MediaThumbnail({
         </View>
       )}
 
-      {/* Video duration badge */}
-      {item.media_type === 'video' && item.duration != null && (
+      {/* Video badge */}
+      {item.media_type === 'video' && (
         <View style={styles.videoBadge}>
           <Icon name="play-arrow" size={12} color="#fff" />
-          <Text style={styles.durationText}>
-            {formatDuration(item.duration)}
-          </Text>
+          {item.duration != null && (
+            <Text style={styles.durationText}>
+              {formatDuration(item.duration)}
+            </Text>
+          )}
         </View>
       )}
 
