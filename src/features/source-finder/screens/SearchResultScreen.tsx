@@ -8,6 +8,8 @@ import {
   Pressable,
   Linking,
   ActivityIndicator,
+  Clipboard,
+  Alert,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useNavigation, useRoute} from '@react-navigation/native';
@@ -41,9 +43,20 @@ function getSimilarityIcon(similarity: number): string {
 
 function ResultItem({result}: {result: SourceResult}) {
   const simColor = getSimilarityColor(result.similarity);
+  const title = result.source_title || result.source_name || 'Sin título';
+
+  const handleCopy = () => {
+    Clipboard.setString(title);
+    Alert.alert('Copiado', title);
+  };
 
   return (
-    <View style={styles.resultItem}>
+    <Pressable
+      onPress={handleCopy}
+      style={({pressed}) => [
+        styles.resultItem,
+        pressed && styles.resultItemPressed,
+      ]}>
       <View style={styles.resultHeader}>
         <Icon
           name={getSimilarityIcon(result.similarity)}
@@ -54,8 +67,9 @@ function ResultItem({result}: {result: SourceResult}) {
           {result.similarity.toFixed(1)}%
         </Text>
         <Text style={styles.resultTitle} numberOfLines={1}>
-          {result.source_title || result.source_name || 'Sin título'}
+          {title}
         </Text>
+        <Icon name="content-copy" size={14} color={colors.textMuted} />
       </View>
 
       {result.index_name ? (
@@ -72,7 +86,10 @@ function ResultItem({result}: {result: SourceResult}) {
 
       {result.source_url ? (
         <Pressable
-          onPress={() => Linking.openURL(result.source_url!)}
+          onPress={e => {
+            e.stopPropagation();
+            Linking.openURL(result.source_url!);
+          }}
           style={({pressed}) => [
             styles.openBtn,
             pressed && styles.openBtnPressed,
@@ -81,7 +98,7 @@ function ResultItem({result}: {result: SourceResult}) {
           <Icon name="open-in-new" size={14} color={colors.primary} />
         </Pressable>
       ) : null}
-    </View>
+    </Pressable>
   );
 }
 
@@ -308,6 +325,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.borderSubtle,
     gap: 6,
+  },
+  resultItemPressed: {
+    borderColor: colors.borderGold,
+    backgroundColor: colors.cardDark,
   },
   resultHeader: {
     flexDirection: 'row',
