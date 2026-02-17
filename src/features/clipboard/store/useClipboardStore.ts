@@ -107,13 +107,19 @@ export const useClipboardStore = create<ClipboardState>((set, get) => ({
 
   loadTags: async () => {
     const db = getDatabase();
+    const {isPrivateMode} = get();
     const result = await db.execute(
-      'SELECT * FROM clipboard_tags ORDER BY name',
+      'SELECT * FROM clipboard_tags WHERE is_private = ? ORDER BY name',
+      [isPrivateMode ? 1 : 0],
     );
     const tags: ClipboardTag[] = [];
     for (let i = 0; i < result.rows.length; i++) {
       const row = result.rows[i];
-      tags.push({id: row.id as number, name: row.name as string});
+      tags.push({
+        id: row.id as number,
+        name: row.name as string,
+        is_private: !!(row.is_private as number),
+      });
     }
     set({tags});
   },
@@ -176,7 +182,11 @@ export const useClipboardStore = create<ClipboardState>((set, get) => ({
       link.tags = [];
       for (let i = 0; i < tagResult.rows.length; i++) {
         const tagRow = tagResult.rows[i];
-        link.tags.push({id: tagRow.id as number, name: tagRow.name as string});
+        link.tags.push({
+          id: tagRow.id as number,
+          name: tagRow.name as string,
+          is_private: !!(tagRow.is_private as number),
+        });
       }
     }
 
@@ -282,19 +292,25 @@ export const useClipboardStore = create<ClipboardState>((set, get) => ({
 
   addTag: async (name) => {
     const db = getDatabase();
+    const {isPrivateMode} = get();
     const trimmed = name.trim();
     if (!trimmed) return null;
-    await db.execute('INSERT OR IGNORE INTO clipboard_tags (name) VALUES (?)', [
-      trimmed,
-    ]);
+    await db.execute(
+      'INSERT OR IGNORE INTO clipboard_tags (name, is_private) VALUES (?, ?)',
+      [trimmed, isPrivateMode ? 1 : 0],
+    );
     const result = await db.execute(
-      'SELECT * FROM clipboard_tags WHERE name = ?',
-      [trimmed],
+      'SELECT * FROM clipboard_tags WHERE name = ? AND is_private = ?',
+      [trimmed, isPrivateMode ? 1 : 0],
     );
     if (result.rows.length > 0) {
       await get().loadTags();
       const row = result.rows[0];
-      return {id: row.id as number, name: row.name as string};
+      return {
+        id: row.id as number,
+        name: row.name as string,
+        is_private: !!(row.is_private as number),
+      };
     }
     return null;
   },

@@ -2,6 +2,7 @@ import React, {useState, useEffect, useCallback} from 'react';
 import {StyleSheet, Text, View, Alert, ScrollView, Pressable, TextInput} from 'react-native';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import type {RouteProp} from '@react-navigation/native';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {colors, fontFamily, borderRadius} from '../../../core/theme';
 import {Button, Input, Header, Icon} from '../../../core/components';
 import {useFinanceStore} from '../store/useFinanceStore';
@@ -38,6 +39,7 @@ function amountToRaw(amount: number): string {
 export function AddRecurringScreen() {
   const navigation = useNavigation();
   const route = useRoute<AddRecurringRoute>();
+  const insets = useSafeAreaInsets();
   const {
     categories,
     recurring,
@@ -143,7 +145,7 @@ export function AddRecurringScreen() {
         onBack={() => navigation.goBack()}
       />
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, {paddingBottom: 24 + insets.bottom}]}>
         {/* Currency toggle */}
         <View style={styles.currencyToggle}>
           <Pressable

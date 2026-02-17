@@ -281,6 +281,11 @@ export function SettingsScreen() {
                 label="Finanzas"
                 value={`${storageStats.financeTransactions} transacciones · ${storageStats.financeCategories} categorías`}
               />
+              <StatRow
+                icon="image-search"
+                label="Buscador"
+                value={`${storageStats.sourceSearches} búsquedas · ${storageStats.sourceResults} resultados`}
+              />
             </View>
             <View style={styles.totalRow}>
               <Text style={styles.totalLabel}>Total</Text>

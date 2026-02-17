@@ -11,6 +11,8 @@ export interface StorageStats {
   focusSessions: number;
   financeTransactions: number;
   financeCategories: number;
+  sourceSearches: number;
+  sourceResults: number;
   totalRecords: number;
 }
 
@@ -50,6 +52,8 @@ export function useSettings() {
         db.execute('SELECT COUNT(*) as count FROM focus_sessions'),
         db.execute('SELECT COUNT(*) as count FROM finance_transactions'),
         db.execute('SELECT COUNT(*) as count FROM finance_categories'),
+        db.execute('SELECT COUNT(*) as count FROM source_finder_searches'),
+        db.execute('SELECT COUNT(*) as count FROM source_finder_results'),
       ]);
 
       const values = counts.map(r => (r.rows[0].count as number) || 0);
@@ -65,6 +69,8 @@ export function useSettings() {
         focusSessions: values[6],
         financeTransactions: values[7],
         financeCategories: values[8],
+        sourceSearches: values[9],
+        sourceResults: values[10],
         totalRecords: total,
       });
     } catch {

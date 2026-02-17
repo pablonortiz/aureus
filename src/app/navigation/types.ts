@@ -26,6 +26,8 @@ export type RootStackParamList = {
   } | undefined;
   ManageRecurring: undefined;
   AddRecurring: {recurringId?: number} | undefined;
+  SourceFinder: undefined;
+  SearchResult: {searchId: number};
 };
 
 export type MainTabParamList = {

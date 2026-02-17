@@ -18,6 +18,8 @@ import {FinanceScreen} from '../../features/finance/screens/FinanceScreen';
 import {AddTransactionScreen} from '../../features/finance/screens/AddTransactionScreen';
 import {ManageRecurringScreen} from '../../features/finance/screens/ManageRecurringScreen';
 import {AddRecurringScreen} from '../../features/finance/screens/AddRecurringScreen';
+import {SourceFinderScreen} from '../../features/source-finder/screens/SourceFinderScreen';
+import {SearchResultScreen} from '../../features/source-finder/screens/SearchResultScreen';
 import type {RootStackParamList} from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -64,6 +66,8 @@ export function RootNavigator() {
         <Stack.Screen name="AddTransaction" component={AddTransactionScreen} />
         <Stack.Screen name="ManageRecurring" component={ManageRecurringScreen} />
         <Stack.Screen name="AddRecurring" component={AddRecurringScreen} />
+        <Stack.Screen name="SourceFinder" component={SourceFinderScreen} />
+        <Stack.Screen name="SearchResult" component={SearchResultScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

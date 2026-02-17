@@ -118,6 +118,29 @@ export function useRecentActivity(limit = 6) {
         });
       }
 
+      // Source Finder: recent searches
+      const sfResult = await db.execute(
+        `SELECT id, tweet_author, tweet_text, image_count, created_at
+         FROM source_finder_searches
+         ORDER BY created_at DESC LIMIT ?`,
+        [limit],
+      );
+      for (const row of sfResult.rows) {
+        const author = row.tweet_author as string | null;
+        const text = row.tweet_text as string | null;
+        const title = author
+          ? `@${author}${text ? `: ${text}` : ''}`
+          : 'Búsqueda';
+        items.push({
+          id: `sf-${row.id}`,
+          title,
+          module: 'Buscador',
+          icon: 'image-search',
+          status: `${row.image_count} imgs`,
+          timestamp: row.created_at as string,
+        });
+      }
+
       // Gmail: recent accounts
       const gmailResult = await db.execute(
         `SELECT id, email_prefix, created_at FROM gmail_accounts

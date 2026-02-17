@@ -1,4 +1,5 @@
 import React, {useState, useEffect, useMemo} from 'react';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {
   StyleSheet,
   Text,
@@ -20,6 +21,7 @@ type ItemType = 'link' | 'note';
 export function EditItemScreen() {
   const navigation = useNavigation();
   const route = useRoute<RouteProp<RootStackParamList, 'EditItem'>>();
+  const insets = useSafeAreaInsets();
   const {itemId} = route.params;
 
   const {links, updateItem, folders, tags, loadFolders, loadTags, addTag} =
@@ -115,7 +117,7 @@ export function EditItemScreen() {
     <View style={styles.container}>
       <Header title="Editar Item" onBack={() => navigation.goBack()} />
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, {paddingBottom: 48 + insets.bottom}]}>
         {/* Type Toggle */}
         <View style={styles.typeSwitcher}>
           <Pressable

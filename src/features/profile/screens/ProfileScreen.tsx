@@ -69,6 +69,10 @@ export function ProfileScreen() {
           <Text style={styles.statValue}>{stats.tasksCompletedToday}</Text>
           <Text style={styles.statLabel}>Tareas hoy</Text>
         </View>
+        <View style={styles.statCard}>
+          <Text style={styles.statValue}>{stats.searches}</Text>
+          <Text style={styles.statLabel}>Búsquedas</Text>
+        </View>
       </ScrollView>
 
       {/* Usage Summary */}

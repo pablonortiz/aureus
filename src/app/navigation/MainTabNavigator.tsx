@@ -43,6 +43,13 @@ const quickActions = [
     route: 'AddGmail' as const,
     params: undefined,
   },
+  {
+    icon: 'image-search',
+    label: 'Buscar fuente',
+    color: '#f59e0b',
+    route: 'SourceFinder' as const,
+    params: undefined,
+  },
 ];
 
 function FABButton() {
@@ -73,7 +80,7 @@ function FABButton() {
         <Pressable
           style={styles.menuOverlay}
           onPress={() => setMenuVisible(false)}>
-          <View style={styles.menuSheet}>
+          <View style={[styles.menuSheet, {paddingBottom: 40 + insets.bottom}]}>
             <View style={styles.menuHandle} />
             <Text style={styles.menuTitle}>Agregar</Text>
 
@@ -105,12 +112,17 @@ function FABButton() {
 }
 
 export function MainTabNavigator() {
+  const insets = useSafeAreaInsets();
+
   return (
     <>
       <Tab.Navigator
         screenOptions={{
           headerShown: false,
-          tabBarStyle: styles.tabBar,
+          tabBarStyle: [
+            styles.tabBar,
+            {height: 70 + insets.bottom, paddingBottom: 12 + insets.bottom},
+          ],
           tabBarActiveTintColor: colors.primary,
           tabBarInactiveTintColor: colors.textMuted,
           tabBarLabelStyle: styles.tabBarLabel,
@@ -164,9 +176,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.navBarDark,
     borderTopWidth: 1,
     borderTopColor: colors.borderGoldLight,
-    height: 70,
     paddingTop: 8,
-    paddingBottom: 12,
     elevation: 0,
   },
   tabBarLabel: {
@@ -211,7 +221,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: borderRadius.xl,
     paddingHorizontal: 24,
     paddingTop: 12,
-    paddingBottom: 40,
+    paddingBottom: 40, // base; insets.bottom added inline
     borderTopWidth: 1,
     borderColor: colors.borderGold,
   },

@@ -91,6 +91,23 @@ function runMigrations(database: DB): void {
     );
   `);
 
+  // Add is_private to clipboard_tags (idempotent)
+  try {
+    database.executeSync(
+      'ALTER TABLE clipboard_tags ADD COLUMN is_private INTEGER DEFAULT 0',
+    );
+  } catch (_e) {
+    // Column already exists
+  }
+  // Allow same tag name in public and private (unique on name+is_private)
+  try {
+    database.executeSync(
+      'CREATE UNIQUE INDEX IF NOT EXISTS idx_tags_name_private ON clipboard_tags (name, is_private)',
+    );
+  } catch (_e) {
+    // Index already exists
+  }
+
   // Clipboard folders
   database.executeSync(`
     CREATE TABLE IF NOT EXISTS clipboard_folders (
@@ -235,6 +252,36 @@ function runMigrations(database: DB): void {
       recurring_id INTEGER NOT NULL REFERENCES finance_recurring(id) ON DELETE CASCADE,
       category_id INTEGER NOT NULL REFERENCES finance_categories(id) ON DELETE CASCADE,
       PRIMARY KEY (recurring_id, category_id)
+    );
+  `);
+
+  // Source Finder module
+  database.executeSync(`
+    CREATE TABLE IF NOT EXISTS source_finder_searches (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tweet_url TEXT NOT NULL,
+      tweet_id TEXT NOT NULL,
+      tweet_text TEXT,
+      tweet_author TEXT,
+      tweet_author_avatar TEXT,
+      image_count INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+  `);
+
+  database.executeSync(`
+    CREATE TABLE IF NOT EXISTS source_finder_results (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      search_id INTEGER NOT NULL REFERENCES source_finder_searches(id) ON DELETE CASCADE,
+      image_url TEXT NOT NULL,
+      source_name TEXT,
+      source_title TEXT,
+      similarity REAL,
+      source_url TEXT,
+      thumbnail_url TEXT,
+      index_name TEXT,
+      creators TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
     );
   `);
 

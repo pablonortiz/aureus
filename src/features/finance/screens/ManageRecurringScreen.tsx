@@ -2,6 +2,7 @@ import React, {useEffect} from 'react';
 import {StyleSheet, Text, View, FlatList, Pressable, Switch, Alert} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {colors, typography, fontFamily, borderRadius} from '../../../core/theme';
 import {Header, Icon, EmptyState, Button} from '../../../core/components';
 import {useFinanceStore} from '../store/useFinanceStore';
@@ -78,6 +79,7 @@ function RecurringItem({
 
 export function ManageRecurringScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const insets = useSafeAreaInsets();
   const {
     recurring,
     loadRecurring,
@@ -130,7 +132,7 @@ export function ManageRecurringScreen() {
         />
       )}
 
-      <View style={styles.addBtnContainer}>
+      <View style={[styles.addBtnContainer, {bottom: 24 + insets.bottom}]}>
         <Button
           title="Nuevo Recurrente"
           onPress={() => navigation.navigate('AddRecurring')}
@@ -216,7 +218,6 @@ const styles = StyleSheet.create({
   },
   addBtnContainer: {
     position: 'absolute',
-    bottom: 24,
     left: 24,
     right: 24,
   },

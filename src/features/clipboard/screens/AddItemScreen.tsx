@@ -1,4 +1,5 @@
 import React, {useState, useEffect} from 'react';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {
   StyleSheet,
   Text,
@@ -19,6 +20,7 @@ type ItemType = 'link' | 'note';
 
 export function AddItemScreen() {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const route = useRoute<RouteProp<RootStackParamList, 'AddItem'>>();
   const isPrivate = route.params?.isPrivate || false;
   const prefillFolderId = route.params?.folderId ?? null;
@@ -101,7 +103,7 @@ export function AddItemScreen() {
         onBack={() => navigation.goBack()}
       />
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, {paddingBottom: 48 + insets.bottom}]}>
         {/* Type Toggle */}
         <View style={styles.typeSwitcher}>
           <Pressable

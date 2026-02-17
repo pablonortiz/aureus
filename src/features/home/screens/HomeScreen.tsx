@@ -40,6 +40,13 @@ const modules: ModuleDefinition[] = [
     description: 'Revisá tu balance',
     route: 'Finance',
   },
+  {
+    id: 'source-finder',
+    name: 'Buscador',
+    icon: 'image-search',
+    description: 'Identificá manga, anime y más',
+    route: 'SourceFinder',
+  },
 ];
 
 function ModuleCard({module, onPress}: {module: ModuleDefinition; onPress: () => void}) {

@@ -66,6 +66,7 @@ export interface ClipboardLink {
 export interface ClipboardTag {
   id: number;
   name: string;
+  is_private: boolean;
 }
 
 // Focus module types
@@ -118,6 +119,33 @@ export interface FinanceRecurring {
   is_active: boolean;
   created_at: string;
   categories: FinanceCategory[];
+}
+
+// Source Finder module types
+export interface SourceSearch {
+  id: number;
+  tweet_url: string;
+  tweet_id: string;
+  tweet_text: string | null;
+  tweet_author: string | null;
+  tweet_author_avatar: string | null;
+  image_count: number;
+  created_at: string;
+  results?: SourceResult[];
+}
+
+export interface SourceResult {
+  id: number;
+  search_id: number;
+  image_url: string;
+  source_name: string | null;
+  source_title: string | null;
+  similarity: number;
+  source_url: string | null;
+  thumbnail_url: string | null;
+  index_name: string | null;
+  creators: string | null;
+  created_at: string;
 }
 
 // Module definition for the dashboard

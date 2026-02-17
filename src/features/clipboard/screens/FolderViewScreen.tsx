@@ -12,6 +12,7 @@ import {
 import {useNavigation, useRoute} from '@react-navigation/native';
 import type {RouteProp} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {colors, fontFamily, borderRadius} from '../../../core/theme';
 import {Header, Icon, EmptyState} from '../../../core/components';
 import {useClipboardStore} from '../store/useClipboardStore';
@@ -113,6 +114,7 @@ export function FolderViewScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, 'FolderView'>>();
+  const insets = useSafeAreaInsets();
   const {folderId, folderName} = route.params;
 
   const {
@@ -164,28 +166,30 @@ export function FolderViewScreen() {
 
       {/* Tag filter chips */}
       {tags.length > 0 && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.tagFilterRow}>
-          {tags.map(tag => (
-            <Pressable
-              key={tag.id}
-              style={[
-                styles.filterChip,
-                activeTags.includes(tag.id) && styles.filterChipActive,
-              ]}
-              onPress={() => toggleTag(tag.id)}>
-              <Text
+        <View style={styles.tagFilterWrapper}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.tagFilterRow}>
+            {tags.map(tag => (
+              <Pressable
+                key={tag.id}
                 style={[
-                  styles.filterChipText,
-                  activeTags.includes(tag.id) && styles.filterChipTextActive,
-                ]}>
-                {tag.name}
-              </Text>
-            </Pressable>
-          ))}
-        </ScrollView>
+                  styles.filterChip,
+                  activeTags.includes(tag.id) && styles.filterChipActive,
+                ]}
+                onPress={() => toggleTag(tag.id)}>
+                <Text
+                  style={[
+                    styles.filterChipText,
+                    activeTags.includes(tag.id) && styles.filterChipTextActive,
+                  ]}>
+                  {tag.name}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
       )}
 
       {links.length === 0 ? (
@@ -206,7 +210,7 @@ export function FolderViewScreen() {
 
       {/* Add button */}
       <Pressable
-        style={styles.fab}
+        style={[styles.fab, {bottom: 24 + insets.bottom}]}
         onPress={() =>
           navigation.navigate('AddItem', {
             isPrivate: isPrivateMode,
@@ -224,9 +228,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.backgroundDark,
   },
+  tagFilterWrapper: {
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderSubtle,
+  },
   tagFilterRow: {
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 10,
     gap: 8,
     alignItems: 'center',
   },
@@ -349,7 +357,6 @@ const styles = StyleSheet.create({
   },
   fab: {
     position: 'absolute',
-    bottom: 24,
     right: 24,
     width: 56,
     height: 56,

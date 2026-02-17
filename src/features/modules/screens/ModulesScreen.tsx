@@ -12,6 +12,7 @@ const allModules = [
   {id: 'clipboard', name: 'Clipboard', icon: 'content-paste', desc: 'Links guardados y bóveda segura', route: 'Clipboard'},
   {id: 'focus', name: 'Enfoque', icon: 'timer', desc: 'Sesiones de trabajo profundo', route: 'Focus'},
   {id: 'finance', name: 'Finanzas', icon: 'account-balance-wallet', desc: 'Balance y transacciones', route: 'Finance'},
+  {id: 'source-finder', name: 'Buscador de Fuentes', icon: 'image-search', desc: 'Identificá manga, anime y más', route: 'SourceFinder'},
 ];
 
 export function ModulesScreen() {
