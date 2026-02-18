@@ -1,8 +1,9 @@
-import React, {useState, useRef, useCallback} from 'react';
+import React, {useState, useRef, useCallback, useEffect} from 'react';
 import {
   StyleSheet,
   FlatList,
   useWindowDimensions,
+  Dimensions,
   View,
   Text,
   type GestureResponderEvent,
@@ -27,6 +28,10 @@ interface MediaGridProps {
 
 const NUM_COLUMNS = 3;
 const GRID_GAP = 3;
+const SCREEN_HEIGHT = Dimensions.get('window').height;
+const AUTO_SCROLL_ZONE = 120; // px from edge to trigger auto-scroll
+const AUTO_SCROLL_SPEED = 8; // px per tick
+const AUTO_SCROLL_INTERVAL = 16; // ms between ticks (~60fps)
 
 export function MediaGrid({
   media,
@@ -50,6 +55,11 @@ export function MediaGrid({
   const lastSelectedIndexRef = useRef(-1);
   const flatListRef = useRef<FlatList>(null);
   const wrapperRef = useRef<View>(null);
+
+  // Auto-scroll refs
+  const autoScrollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const autoScrollDirRef = useRef<'up' | 'down' | null>(null);
+  const lastTouchRef = useRef<{pageX: number; pageY: number} | null>(null);
 
   const getItemIndexAtPosition = useCallback(
     (pageX: number, pageY: number): number => {
@@ -84,13 +94,10 @@ export function MediaGrid({
     [onLongPress, onDragSelect, media],
   );
 
-  const handleTouchMove = useCallback(
-    (e: GestureResponderEvent) => {
-      if (!isDragSelectingRef.current || !onDragSelect) return;
-
-      const {pageX, pageY} = e.nativeEvent;
+  const selectAtPosition = useCallback(
+    (pageX: number, pageY: number) => {
+      if (!onDragSelect) return;
       const index = getItemIndexAtPosition(pageX, pageY);
-
       if (index >= 0 && index !== lastSelectedIndexRef.current) {
         const item = media[index];
         if (item && !selectedIds.includes(item.id)) {
@@ -102,13 +109,64 @@ export function MediaGrid({
     [getItemIndexAtPosition, media, selectedIds, onDragSelect],
   );
 
+  const startAutoScroll = useCallback(
+    (dir: 'up' | 'down') => {
+      if (autoScrollDirRef.current === dir) return;
+      stopAutoScroll();
+      autoScrollDirRef.current = dir;
+      autoScrollRef.current = setInterval(() => {
+        const delta = dir === 'down' ? AUTO_SCROLL_SPEED : -AUTO_SCROLL_SPEED;
+        flatListRef.current?.scrollToOffset({
+          offset: Math.max(0, scrollOffsetRef.current + delta),
+          animated: false,
+        });
+        // Select item under finger while auto-scrolling
+        const touch = lastTouchRef.current;
+        if (touch) {
+          selectAtPosition(touch.pageX, touch.pageY);
+        }
+      }, AUTO_SCROLL_INTERVAL);
+    },
+    [selectAtPosition],
+  );
+
+  const stopAutoScroll = useCallback(() => {
+    if (autoScrollRef.current) {
+      clearInterval(autoScrollRef.current);
+      autoScrollRef.current = null;
+    }
+    autoScrollDirRef.current = null;
+  }, []);
+
+  const handleTouchMove = useCallback(
+    (e: GestureResponderEvent) => {
+      if (!isDragSelectingRef.current || !onDragSelect) return;
+
+      const {pageX, pageY} = e.nativeEvent;
+      lastTouchRef.current = {pageX, pageY};
+      selectAtPosition(pageX, pageY);
+
+      // Auto-scroll when near edges
+      if (pageY > SCREEN_HEIGHT - AUTO_SCROLL_ZONE) {
+        startAutoScroll('down');
+      } else if (pageY < AUTO_SCROLL_ZONE) {
+        startAutoScroll('up');
+      } else {
+        stopAutoScroll();
+      }
+    },
+    [selectAtPosition, onDragSelect, startAutoScroll, stopAutoScroll],
+  );
+
   const handleTouchEnd = useCallback(() => {
+    stopAutoScroll();
+    lastTouchRef.current = null;
     if (isDragSelectingRef.current) {
       isDragSelectingRef.current = false;
       setDragSelecting(false);
       lastSelectedIndexRef.current = -1;
     }
-  }, []);
+  }, [stopAutoScroll]);
 
   const handleScroll = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -125,13 +183,19 @@ export function MediaGrid({
   }, []);
 
   // Reset drag state when selection mode is cleared
-  React.useEffect(() => {
+  useEffect(() => {
     if (!selectionMode) {
+      stopAutoScroll();
       isDragSelectingRef.current = false;
       setDragSelecting(false);
       lastSelectedIndexRef.current = -1;
     }
-  }, [selectionMode]);
+  }, [selectionMode, stopAutoScroll]);
+
+  // Cleanup auto-scroll on unmount
+  useEffect(() => {
+    return () => stopAutoScroll();
+  }, [stopAutoScroll]);
 
   if (media.length === 0) {
     return (

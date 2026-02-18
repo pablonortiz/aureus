@@ -30,6 +30,13 @@ import {getDatabase} from '../../../core/database';
 const {SecureScreen} = NativeModules;
 const {width: SCREEN_WIDTH, height: SCREEN_HEIGHT} = Dimensions.get('window');
 
+function normalizeText(text: string): string {
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -73,6 +80,7 @@ export function MediaViewerScreen() {
   const autoHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showInfo, setShowInfo] = useState(false);
   const [showCatModal, setShowCatModal] = useState(false);
+  const [catSearch, setCatSearch] = useState('');
   const [editingNotes, setEditingNotes] = useState(false);
   const [notesText, setNotesText] = useState('');
   const [mediaCategoryIds, setMediaCategoryIds] = useState<number[]>([]);
@@ -460,28 +468,41 @@ export function MediaViewerScreen() {
       <Modal visible={showCatModal} transparent animationType="fade">
         <Pressable
           style={styles.modalOverlay}
-          onPress={() => setShowCatModal(false)}>
-          <View style={styles.infoSheet}>
+          onPress={() => { setShowCatModal(false); setCatSearch(''); }}>
+          <View style={styles.infoSheet} onStartShouldSetResponder={() => true}>
             <View style={styles.sheetHandle} />
             <Text style={styles.sheetTitle}>Categorías</Text>
+            <TextInput
+              style={styles.catSearchInput}
+              value={catSearch}
+              onChangeText={setCatSearch}
+              placeholder="Buscar categoría..."
+              placeholderTextColor={colors.textMuted}
+            />
             <ScrollView showsVerticalScrollIndicator={false}>
-              {categories.map(cat => (
-                <Pressable
-                  key={cat.id}
-                  style={styles.catOption}
-                  onPress={() => handleToggleCat(cat.id)}>
-                  <View
-                    style={[
-                      styles.catDot,
-                      {backgroundColor: cat.color || '#94a3b8'},
-                    ]}
-                  />
-                  <Text style={styles.catName}>{cat.name}</Text>
-                  {mediaCategoryIds.includes(cat.id) && (
-                    <Icon name="check" size={20} color={colors.primary} />
-                  )}
-                </Pressable>
-              ))}
+              {categories
+                .filter(cat =>
+                  catSearch.trim()
+                    ? normalizeText(cat.name).includes(normalizeText(catSearch.trim()))
+                    : true,
+                )
+                .map(cat => (
+                  <Pressable
+                    key={cat.id}
+                    style={styles.catOption}
+                    onPress={() => handleToggleCat(cat.id)}>
+                    <View
+                      style={[
+                        styles.catDot,
+                        {backgroundColor: cat.color || '#94a3b8'},
+                      ]}
+                    />
+                    <Text style={styles.catName}>{cat.name}</Text>
+                    {mediaCategoryIds.includes(cat.id) && (
+                      <Icon name="check" size={20} color={colors.primary} />
+                    )}
+                  </Pressable>
+                ))}
             </ScrollView>
           </View>
         </Pressable>
@@ -701,6 +722,18 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.semiBold,
     fontSize: 14,
     color: colors.textSecondary,
+  },
+  catSearchInput: {
+    backgroundColor: colors.backgroundDark,
+    borderRadius: borderRadius.md,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontFamily: fontFamily.regular,
+    fontSize: 14,
+    color: colors.textPrimary,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    marginBottom: 8,
   },
   catOption: {
     flexDirection: 'row',
