@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useState, useMemo} from 'react';
 import {StyleSheet, Text, View, ScrollView, Pressable, Alert, TextInput} from 'react-native';
 import Animated, {useSharedValue, useAnimatedStyle, withTiming, interpolate} from 'react-native-reanimated';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
@@ -7,6 +7,7 @@ import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {colors, typography, fontFamily, borderRadius} from '../../../core/theme';
 import {Icon, Button, EmptyState} from '../../../core/components';
 import {useFinanceStore} from '../store/useFinanceStore';
+import {getDatabase} from '../../../core/database';
 import type {FinanceTransaction} from '../../../core/types';
 import type {RootStackParamList} from '../../../app/navigation/types';
 
@@ -40,11 +41,13 @@ function TransactionItem({
   onDelete,
   onConfirmPending,
   onEdit,
+  raiseAmount,
 }: {
   transaction: FinanceTransaction;
   onDelete: () => void;
   onConfirmPending: () => void;
   onEdit: () => void;
+  raiseAmount?: number | null;
 }) {
   const isExpense = transaction.type === 'expense';
   const isPending = transaction.status === 'pending';
@@ -112,6 +115,12 @@ function TransactionItem({
         {equivalentText ? (
           <Text style={styles.txEquivalent}>{equivalentText}</Text>
         ) : null}
+        {raiseAmount != null && raiseAmount > 0 && (
+          <View style={styles.raiseChip}>
+            <Icon name="trending-up" size={12} color="#22c55e" />
+            <Text style={styles.raiseChipText}>+{formatArs(raiseAmount)}</Text>
+          </View>
+        )}
       </View>
     </Pressable>
   );
@@ -134,6 +143,7 @@ export function FinanceScreen() {
     generatePendingTransactions,
     loadPendingRecurringTotal,
     loadPendingLookaheadDay,
+    loadSalaryAmount,
     getMonthExpenses,
     getTransactionsForMonth,
   } = useFinanceStore();
@@ -175,10 +185,11 @@ export function FinanceScreen() {
     useCallback(() => {
       generatePendingTransactions();
       loadCategories();
+      loadSalaryAmount();
       loadPendingLookaheadDay().then(() =>
         loadExchangeRate().then(() => loadPendingRecurringTotal()),
       );
-    }, [generatePendingTransactions, loadCategories, loadPendingLookaheadDay, loadExchangeRate, loadPendingRecurringTotal]),
+    }, [generatePendingTransactions, loadCategories, loadSalaryAmount, loadPendingLookaheadDay, loadExchangeRate, loadPendingRecurringTotal]),
   );
 
   // Reload trend data and month transactions when month changes or transactions change
@@ -246,6 +257,34 @@ export function FinanceScreen() {
     const needle = normalizeText(txSearch);
     return txs.filter(t => normalizeText(t.title).includes(needle));
   };
+
+  // Compute raise amounts for salary transactions
+  const [raiseMap, setRaiseMap] = useState<Map<number, number>>(new Map());
+
+  useEffect(() => {
+    const computeRaises = async () => {
+      const db = getDatabase();
+      const salaryTxs = await db.execute(
+        `SELECT ft.id, ft.amount FROM finance_transactions ft
+         JOIN finance_transaction_categories ftc ON ftc.transaction_id = ft.id
+         JOIN finance_categories fc ON fc.id = ftc.category_id
+         WHERE ft.title = 'Sueldo' AND fc.name = 'Sueldo' AND ft.type = 'income'
+         ORDER BY ft.date DESC, ft.id DESC
+         LIMIT 20`,
+      );
+      const newMap = new Map<number, number>();
+      const rows = salaryTxs.rows;
+      for (let i = 0; i < rows.length - 1; i++) {
+        const current = rows[i].amount as number;
+        const previous = rows[i + 1].amount as number;
+        if (current > previous) {
+          newMap.set(rows[i].id as number, current - previous);
+        }
+      }
+      setRaiseMap(newMap);
+    };
+    computeRaises();
+  }, [transactions]);
 
   const pendingTxs = transactions.filter(t => t.status === 'pending');
   const allConfirmedTxs = filterBySearch(transactions.filter(t => t.status === 'confirmed'));
@@ -417,6 +456,7 @@ export function FinanceScreen() {
                           onDelete={() => handleDelete(tx.id)}
                           onConfirmPending={() => handleConfirmPending(tx)}
                           onEdit={() => handleEdit(tx)}
+                          raiseAmount={raiseMap.get(tx.id) ?? null}
                         />
                       ))}
                     </View>
@@ -463,6 +503,7 @@ export function FinanceScreen() {
                       onDelete={() => handleDelete(tx.id)}
                       onConfirmPending={() => handleConfirmPending(tx)}
                       onEdit={() => handleEdit(tx)}
+                      raiseAmount={raiseMap.get(tx.id) ?? null}
                     />
                   ))}
                 </View>
@@ -512,6 +553,7 @@ export function FinanceScreen() {
                       onDelete={() => handleDelete(tx.id)}
                       onConfirmPending={() => handleConfirmPending(tx)}
                       onEdit={() => handleEdit(tx)}
+                      raiseAmount={raiseMap.get(tx.id) ?? null}
                     />
                   ))}
                 </View>
@@ -521,14 +563,21 @@ export function FinanceScreen() {
         </View>
       </ScrollView>
 
-      {/* Add Transaction Button */}
+      {/* Bottom action row */}
       <View style={[styles.addBtnContainer, {bottom: 24 + insets.bottom}]}>
-        <Button
-          title="Agregar Transacción"
-          onPress={() => navigation.navigate('AddTransaction')}
-          icon="add"
-          fullWidth
-        />
+        <Pressable
+          style={styles.gearBtn}
+          onPress={() => navigation.navigate('FinanceSettings')}>
+          <Icon name="settings" size={22} color={colors.primary} />
+        </Pressable>
+        <View style={{flex: 1}}>
+          <Button
+            title="Agregar Transacción"
+            onPress={() => navigation.navigate('AddTransaction')}
+            icon="add"
+            fullWidth
+          />
+        </View>
       </View>
     </View>
   );
@@ -877,5 +926,33 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 24,
     right: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  gearBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.surfaceDark,
+    borderWidth: 1,
+    borderColor: colors.borderGold,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  raiseChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: 'rgba(34, 197, 94, 0.15)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: borderRadius.sm,
+    marginTop: 3,
+  },
+  raiseChipText: {
+    fontFamily: fontFamily.bold,
+    fontSize: 10,
+    color: '#22c55e',
   },
 });

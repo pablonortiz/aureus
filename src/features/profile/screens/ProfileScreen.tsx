@@ -42,6 +42,18 @@ export function ProfileScreen() {
       <Text style={styles.name}>Pablo</Text>
       <Text style={styles.subtitle}>App personal</Text>
 
+      {/* Salary card */}
+      {usage.salaryAmount > 0 && (
+        <View style={styles.salaryCard}>
+          <View style={styles.salaryIconWrap}>
+            <Icon name="payments" size={18} color="#22c55e" />
+          </View>
+          <Text style={styles.salaryText}>
+            Sueldo actual: {formatARS(usage.salaryAmount)}
+          </Text>
+        </View>
+      )}
+
       {/* Stats Row */}
       <ScrollView
         horizontal
@@ -207,7 +219,32 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textSecondary,
     marginTop: 4,
-    marginBottom: 28,
+    marginBottom: 16,
+  },
+  salaryCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(34, 197, 94, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.25)',
+    borderRadius: borderRadius.full,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    marginBottom: 16,
+  },
+  salaryIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(34, 197, 94, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  salaryText: {
+    fontFamily: fontFamily.semiBold,
+    fontSize: 13,
+    color: '#22c55e',
   },
 
   // Stats

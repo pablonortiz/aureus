@@ -55,6 +55,9 @@ export function AddTransactionScreen() {
     loadCategories,
     confirmPendingTransaction,
     dismissPendingTransaction,
+    salaryAmount,
+    loadSalaryAmount,
+    registerSalary,
   } = useFinanceStore();
 
   const params = route.params;
@@ -75,6 +78,7 @@ export function AddTransactionScreen() {
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [salaryLoading, setSalaryLoading] = useState(false);
   const [editLoaded, setEditLoaded] = useState(false);
 
   const isToday = (() => {
@@ -101,7 +105,8 @@ export function AddTransactionScreen() {
 
   useEffect(() => {
     loadCategories();
-  }, [loadCategories]);
+    loadSalaryAmount();
+  }, [loadCategories, loadSalaryAmount]);
 
   // Load existing transaction data for edit mode
   useEffect(() => {
@@ -223,6 +228,22 @@ export function AddTransactionScreen() {
     );
   };
 
+  const handleRegisterSalary = async () => {
+    setSalaryLoading(true);
+    try {
+      await registerSalary();
+      navigation.goBack();
+    } catch {
+      Alert.alert('Error', 'Error al registrar el sueldo');
+    } finally {
+      setSalaryLoading(false);
+    }
+  };
+
+  const formattedSalary = salaryAmount > 0
+    ? `$${salaryAmount.toLocaleString('es-AR', {minimumFractionDigits: 0, maximumFractionDigits: 2})}`
+    : '';
+
   const amountPrefix = currency === 'USD' ? 'US$' : '$';
 
   return (
@@ -233,6 +254,25 @@ export function AddTransactionScreen() {
       />
 
       <ScrollView contentContainerStyle={[styles.content, {paddingBottom: 24 + insets.bottom}]}>
+        {/* Salary quick-register banner */}
+        {!isPendingMode && !isEditMode && salaryAmount > 0 && (
+          <Pressable
+            style={styles.salaryBanner}
+            onPress={handleRegisterSalary}
+            disabled={salaryLoading}>
+            <View style={styles.salaryBannerIcon}>
+              <Icon name="payments" size={22} color="#22c55e" />
+            </View>
+            <View style={styles.salaryBannerInfo}>
+              <Text style={styles.salaryBannerTitle}>
+                {salaryLoading ? 'Registrando...' : `Cobré el sueldo · ${formattedSalary}`}
+              </Text>
+              <Text style={styles.salaryBannerSub}>Toca para registrar como ingreso</Text>
+            </View>
+            <Icon name="chevron-right" size={20} color="#22c55e" />
+          </Pressable>
+        )}
+
         {/* Type toggle — hidden in pending mode (always expense) */}
         {!isPendingMode && (
           <View style={styles.typeToggle}>
@@ -623,5 +663,38 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bold,
     fontSize: 14,
     color: colors.dangerRed,
+  },
+  salaryBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: 'rgba(34, 197, 94, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.3)',
+    borderRadius: borderRadius.lg,
+    padding: 14,
+    marginBottom: 20,
+  },
+  salaryBannerIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: borderRadius.sm,
+    backgroundColor: 'rgba(34, 197, 94, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  salaryBannerInfo: {
+    flex: 1,
+  },
+  salaryBannerTitle: {
+    fontFamily: fontFamily.bold,
+    fontSize: 15,
+    color: '#22c55e',
+  },
+  salaryBannerSub: {
+    fontFamily: fontFamily.regular,
+    fontSize: 12,
+    color: colors.textMuted,
+    marginTop: 2,
   },
 });

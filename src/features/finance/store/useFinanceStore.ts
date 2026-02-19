@@ -16,12 +16,16 @@ interface FinanceState {
   recurring: FinanceRecurring[];
   pendingRecurringTotal: number;
   pendingLookaheadDay: number;
+  salaryAmount: number;
   loading: boolean;
 
   loadTransactions: () => Promise<void>;
   loadCategories: () => Promise<void>;
   loadPendingLookaheadDay: () => Promise<void>;
   updatePendingLookaheadDay: (day: number) => Promise<void>;
+  loadSalaryAmount: () => Promise<void>;
+  updateSalaryAmount: (amount: number) => Promise<void>;
+  registerSalary: () => Promise<void>;
   addTransaction: (
     title: string,
     amount: number,
@@ -92,6 +96,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
   recurring: [],
   pendingRecurringTotal: 0,
   pendingLookaheadDay: 5,
+  salaryAmount: 0,
   loading: false,
 
   loadTransactions: async () => {
@@ -257,6 +262,44 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
     );
     set({pendingLookaheadDay: day});
     await get().loadPendingRecurringTotal();
+  },
+
+  loadSalaryAmount: async () => {
+    const db = getDatabase();
+    const result = await db.execute(
+      "SELECT value FROM app_settings WHERE key = 'salary_amount'",
+    );
+    if (result.rows.length > 0) {
+      const amount = parseFloat(result.rows[0].value as string) || 0;
+      set({salaryAmount: amount});
+    }
+  },
+
+  updateSalaryAmount: async (amount) => {
+    const db = getDatabase();
+    await db.execute(
+      "INSERT OR REPLACE INTO app_settings (key, value) VALUES ('salary_amount', ?)",
+      [String(amount)],
+    );
+    set({salaryAmount: amount});
+  },
+
+  registerSalary: async () => {
+    const db = getDatabase();
+    const salaryAmount = get().salaryAmount;
+    if (salaryAmount <= 0) return;
+
+    // Look up "Sueldo" category ID
+    const catResult = await db.execute(
+      "SELECT id FROM finance_categories WHERE name = 'Sueldo'",
+    );
+    const categoryIds = catResult.rows.length > 0
+      ? [catResult.rows[0].id as number]
+      : [];
+
+    await get().addTransaction(
+      'Sueldo', salaryAmount, 'income', categoryIds, 'ARS', 'confirmed',
+    );
   },
 
   loadRecurring: async () => {

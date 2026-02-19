@@ -17,6 +17,7 @@ export interface UsageSummary {
   monthExpenses: number;
   monthIncome: number;
   itemsThisWeek: number;
+  salaryAmount: number;
 }
 
 export function useProfileStats() {
@@ -35,6 +36,7 @@ export function useProfileStats() {
     monthExpenses: 0,
     monthIncome: 0,
     itemsThisWeek: 0,
+    salaryAmount: 0,
   });
   const [loading, setLoading] = useState(true);
 
@@ -197,11 +199,20 @@ export function useProfileStats() {
         }
       }
 
+      // Salary amount
+      const salaryResult = await db.execute(
+        "SELECT value FROM app_settings WHERE key = 'salary_amount'",
+      );
+      const salaryAmount = salaryResult.rows.length > 0
+        ? (parseFloat(salaryResult.rows[0].value as string) || 0)
+        : 0;
+
       setUsage({
         streakDays: streak,
         monthExpenses,
         monthIncome,
         itemsThisWeek,
+        salaryAmount,
       });
     } catch {
       // Silently fail

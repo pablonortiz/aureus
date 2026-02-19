@@ -25,6 +25,7 @@ export type RootStackParamList = {
     prefillCategoryIds?: number[];
     editTransactionId?: number;
   } | undefined;
+  FinanceSettings: undefined;
   ManageRecurring: undefined;
   AddRecurring: {recurringId?: number; defaultFrequency?: 'monthly' | 'installment' | 'annual'} | undefined;
   SourceFinder: undefined;

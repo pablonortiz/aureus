@@ -16,6 +16,7 @@ import {ManageTagsScreen} from '../../features/clipboard/screens/ManageTagsScree
 import {FocusScreen} from '../../features/focus/screens/FocusScreen';
 import {FinanceScreen} from '../../features/finance/screens/FinanceScreen';
 import {AddTransactionScreen} from '../../features/finance/screens/AddTransactionScreen';
+import {FinanceSettingsScreen} from '../../features/finance/screens/FinanceSettingsScreen';
 import {ManageRecurringScreen} from '../../features/finance/screens/ManageRecurringScreen';
 import {AddRecurringScreen} from '../../features/finance/screens/AddRecurringScreen';
 import {SourceFinderScreen} from '../../features/source-finder/screens/SourceFinderScreen';
@@ -72,6 +73,7 @@ export function RootNavigator() {
         <Stack.Screen name="ManageTags" component={ManageTagsScreen} />
         <Stack.Screen name="Focus" component={FocusScreen} />
         <Stack.Screen name="Finance" component={FinanceScreen} />
+        <Stack.Screen name="FinanceSettings" component={FinanceSettingsScreen} />
         <Stack.Screen name="AddTransaction" component={AddTransactionScreen} />
         <Stack.Screen name="ManageRecurring" component={ManageRecurringScreen} />
         <Stack.Screen name="AddRecurring" component={AddRecurringScreen} />

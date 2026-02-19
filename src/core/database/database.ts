@@ -468,6 +468,14 @@ function runMigrations(database: DB): void {
   database.executeSync(
     "INSERT OR IGNORE INTO app_settings (key, value) VALUES ('pending_lookahead_day', '5')",
   );
+
+  // Finance: "Sueldo" category + salary_amount setting
+  database.executeSync(
+    "INSERT OR IGNORE INTO finance_categories (name, icon, color) VALUES ('Sueldo', 'payments', '#22c55e')",
+  );
+  database.executeSync(
+    "INSERT OR IGNORE INTO app_settings (key, value) VALUES ('salary_amount', '0')",
+  );
 }
 
 export function closeDatabase(): void {
