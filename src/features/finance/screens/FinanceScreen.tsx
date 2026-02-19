@@ -1,5 +1,6 @@
 import React, {useCallback, useEffect, useState} from 'react';
 import {StyleSheet, Text, View, ScrollView, Pressable, Alert, TextInput} from 'react-native';
+import Animated, {useSharedValue, useAnimatedStyle, withTiming, interpolate} from 'react-native-reanimated';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useNavigation, useFocusEffect} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
@@ -205,6 +206,32 @@ export function FinanceScreen() {
     });
   };
 
+  // Flip animation for pending chip
+  const [flipped, setFlipped] = useState(false);
+  const flipProgress = useSharedValue(0);
+
+  const handleFlip = () => {
+    const next = !flipped;
+    setFlipped(next);
+    flipProgress.value = withTiming(next ? 1 : 0, {duration: 400});
+  };
+
+  const frontAnimatedStyle = useAnimatedStyle(() => {
+    const rotateY = interpolate(flipProgress.value, [0, 1], [0, 180]);
+    return {
+      transform: [{rotateY: `${rotateY}deg`}],
+      backfaceVisibility: 'hidden' as const,
+    };
+  });
+
+  const backAnimatedStyle = useAnimatedStyle(() => {
+    const rotateY = interpolate(flipProgress.value, [0, 1], [180, 360]);
+    return {
+      transform: [{rotateY: `${rotateY}deg`}],
+      backfaceVisibility: 'hidden' as const,
+    };
+  });
+
   const [showAll, setShowAll] = useState(false);
   const [txSearch, setTxSearch] = useState('');
   const [showSearch, setShowSearch] = useState(false);
@@ -267,19 +294,28 @@ export function FinanceScreen() {
             </Pressable>
           )}
 
-          {/* Pending recurring badge */}
+          {/* Pending recurring badge — flippable */}
           {pendingRecurringTotal > 0 && (() => {
             const nextM = now.getMonth() === 11 ? 0 : now.getMonth() + 1;
             const nextY = now.getMonth() === 11 ? now.getFullYear() + 1 : now.getFullYear();
             const targetDate = new Date(nextY, nextM, pendingLookaheadDay);
             const targetLabel = targetDate.toLocaleDateString('es-AR', {day: 'numeric', month: 'short'});
+            const postPendingBalance = totalBalance - pendingRecurringTotal;
             return (
-              <View style={styles.pendingRecBadge}>
-                <Icon name="autorenew" size={14} color={colors.primary} />
-                <Text style={styles.pendingRecText}>
-                  Pendiente hasta {targetLabel}: {formatArs(pendingRecurringTotal)}
-                </Text>
-              </View>
+              <Pressable onPress={handleFlip} style={styles.flipContainer}>
+                <Animated.View style={[styles.pendingRecBadge, frontAnimatedStyle]}>
+                  <Icon name="autorenew" size={14} color={colors.primary} />
+                  <Text style={styles.pendingRecText}>
+                    Pendiente hasta {targetLabel}: {formatArs(pendingRecurringTotal)}
+                  </Text>
+                </Animated.View>
+                <Animated.View style={[styles.pendingRecBadge, styles.pendingRecBadgeBack, backAnimatedStyle]}>
+                  <Icon name="account-balance-wallet" size={14} color={colors.successGreen} />
+                  <Text style={styles.pendingRecTextBack}>
+                    Post pagos: {formatArs(postPendingBalance)}
+                  </Text>
+                </Animated.View>
+              </Pressable>
             );
           })()}
 
@@ -583,11 +619,13 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.primary,
   },
+  flipContainer: {
+    marginTop: 10,
+  },
   pendingRecBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginTop: 10,
     backgroundColor: colors.primaryLight,
     paddingHorizontal: 14,
     paddingVertical: 6,
@@ -595,10 +633,23 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.borderGoldLight,
   },
+  pendingRecBadgeBack: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+    borderColor: 'rgba(34, 197, 94, 0.3)',
+  },
   pendingRecText: {
     fontFamily: fontFamily.semiBold,
     fontSize: 13,
     color: colors.primary,
+  },
+  pendingRecTextBack: {
+    fontFamily: fontFamily.semiBold,
+    fontSize: 13,
+    color: colors.successGreen,
   },
   monthlyBadge: {
     flexDirection: 'row',

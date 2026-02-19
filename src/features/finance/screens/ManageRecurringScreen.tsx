@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useMemo, useState} from 'react';
 import {StyleSheet, Text, View, FlatList, Pressable, Switch, Alert} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
@@ -123,8 +123,10 @@ export function ManageRecurringScreen() {
   const insets = useSafeAreaInsets();
   const {
     recurring,
+    exchangeRate,
     loadRecurring,
     loadCategories,
+    loadExchangeRate,
     toggleRecurringActive,
     deleteRecurring,
   } = useFinanceStore();
@@ -134,7 +136,8 @@ export function ManageRecurringScreen() {
   useEffect(() => {
     loadRecurring();
     loadCategories();
-  }, [loadRecurring, loadCategories]);
+    loadExchangeRate();
+  }, [loadRecurring, loadCategories, loadExchangeRate]);
 
   const handleDelete = (id: number, title: string) => {
     Alert.alert(
@@ -155,6 +158,16 @@ export function ManageRecurringScreen() {
   const displayItems = activeTab === 'monthly' ? monthlyItems : annualItems;
 
   const defaultFrequency = activeTab === 'annual' ? 'annual' : 'monthly';
+
+  const tabTotal = useMemo(() => {
+    const rate = exchangeRate || 0;
+    return displayItems
+      .filter(item => item.is_active)
+      .reduce((sum, item) => {
+        const arsAmount = item.currency === 'USD' ? item.amount * rate : item.amount;
+        return sum + arsAmount;
+      }, 0);
+  }, [displayItems, exchangeRate]);
 
   return (
     <View style={styles.container}>
@@ -177,6 +190,18 @@ export function ManageRecurringScreen() {
           </Text>
         </Pressable>
       </View>
+
+      {/* Total chip */}
+      {displayItems.filter(i => i.is_active).length > 0 && (
+        <View style={styles.totalChipContainer}>
+          <View style={styles.totalChip}>
+            <Icon name="functions" size={14} color={colors.primary} />
+            <Text style={styles.totalChipText}>
+              Total: {formatAmount(tabTotal, 'ARS')}
+            </Text>
+          </View>
+        </View>
+      )}
 
       {displayItems.length === 0 ? (
         <View style={styles.emptyContainer}>
@@ -243,6 +268,27 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
   tabTextActive: {
+    color: colors.primary,
+  },
+  totalChipContainer: {
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+  },
+  totalChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.primaryLight,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: borderRadius.full,
+    borderWidth: 1,
+    borderColor: colors.borderGold,
+  },
+  totalChipText: {
+    fontFamily: fontFamily.semiBold,
+    fontSize: 13,
     color: colors.primary,
   },
   emptyContainer: {
