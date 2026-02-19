@@ -13,6 +13,13 @@ const aureusLogo = require('../../../assets/images/aureus-logo.png');
 
 const modules: ModuleDefinition[] = [
   {
+    id: 'tasks',
+    name: 'Tareas',
+    icon: 'task-alt',
+    description: 'Tu lista de pendientes',
+    route: 'Tasks',
+  },
+  {
     id: 'gmail',
     name: 'Gmail',
     icon: 'email',

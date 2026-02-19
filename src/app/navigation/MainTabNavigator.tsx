@@ -16,6 +16,13 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 
 const quickActions = [
   {
+    icon: 'task-alt',
+    label: 'Nueva Tarea',
+    color: '#10b981',
+    route: 'AddTask' as const,
+    params: {},
+  },
+  {
     icon: 'content-paste',
     label: 'Link o Nota',
     color: '#e8ba30',

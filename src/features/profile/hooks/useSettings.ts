@@ -17,6 +17,9 @@ export interface StorageStats {
   galleryFolders: number;
   radarSearches: number;
   radarQueries: number;
+  tasks: number;
+  taskCategories: number;
+  taskRecurring: number;
   totalRecords: number;
 }
 
@@ -62,6 +65,9 @@ export function useSettings() {
         db.execute('SELECT COUNT(*) as count FROM gallery_folders'),
         db.execute('SELECT COUNT(*) as count FROM radar_searches'),
         db.execute('SELECT COUNT(*) as count FROM radar_queries'),
+        db.execute('SELECT COUNT(*) as count FROM tasks'),
+        db.execute('SELECT COUNT(*) as count FROM task_categories'),
+        db.execute('SELECT COUNT(*) as count FROM task_recurring'),
       ]);
 
       const values = counts.map(r => (r.rows[0].count as number) || 0);
@@ -83,6 +89,9 @@ export function useSettings() {
         galleryFolders: values[12],
         radarSearches: values[13],
         radarQueries: values[14],
+        tasks: values[15],
+        taskCategories: values[16],
+        taskRecurring: values[17],
         totalRecords: total,
       });
     } catch {

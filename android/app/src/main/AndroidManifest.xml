@@ -48,5 +48,27 @@
             <data android:mimeType="video/*" />
         </intent-filter>
       </activity>
+
+      <!-- Tasks Widget -->
+      <receiver android:name=".widget.TasksWidgetProvider" android:exported="false">
+        <intent-filter>
+          <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+          <action android:name="com.aureus.widget.ACTION_COMPLETE_TASK" />
+        </intent-filter>
+        <meta-data android:name="android.appwidget.provider"
+          android:resource="@xml/tasks_widget_info" />
+      </receiver>
+
+      <service android:name=".widget.TasksWidgetService"
+        android:permission="android.permission.BIND_REMOTEVIEWS"
+        android:exported="false" />
+
+      <activity android:name=".widget.TasksWidgetConfigActivity"
+        android:exported="true"
+        android:theme="@style/WidgetConfigTheme">
+        <intent-filter>
+          <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+        </intent-filter>
+      </activity>
     </application>
 </manifest>

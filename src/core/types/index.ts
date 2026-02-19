@@ -76,6 +76,7 @@ export interface FocusTask {
   is_completed: boolean;
   date: string;
   created_at: string;
+  task_id: number | null;
 }
 
 export interface FocusSession {
@@ -210,6 +211,51 @@ export interface RadarQuery {
   description: string | null;
   launch_url: string;
   created_at: string;
+}
+
+// Tasks module types
+export interface TaskCategory {
+  id: number;
+  name: string;
+  color: string;
+  icon: string | null;
+  is_default: boolean;
+  created_at: string;
+}
+
+export interface Task {
+  id: number;
+  title: string;
+  title_normalized: string | null;
+  priority: 'high' | 'medium' | 'low';
+  date: string | null;
+  time: string | null;
+  category_id: number | null;
+  notes: string | null;
+  is_completed: boolean;
+  completed_at: string | null;
+  recurring_id: number | null;
+  reminder_minutes: number | null;
+  notification_id: string | null;
+  created_at: string;
+  updated_at: string;
+  category?: TaskCategory;
+}
+
+export interface TaskRecurring {
+  id: number;
+  title: string;
+  priority: 'high' | 'medium' | 'low';
+  category_id: number | null;
+  notes: string | null;
+  time: string | null;
+  frequency: 'daily' | 'weekly' | 'monthly' | 'custom';
+  interval_days: number | null;
+  end_date: string | null;
+  reminder_minutes: number | null;
+  is_active: boolean;
+  created_at: string;
+  category?: TaskCategory;
 }
 
 // Module definition for the dashboard

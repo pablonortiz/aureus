@@ -8,6 +8,7 @@ import {Icon} from '../../../core/components';
 import type {RootStackParamList} from '../../../app/navigation/types';
 
 const allModules = [
+  {id: 'tasks', name: 'Tareas', icon: 'task-alt', desc: 'Lista de tareas y pendientes', route: 'Tasks'},
   {id: 'gmail', name: 'Cuentas Gmail', icon: 'email', desc: 'Gestionar cuentas y plataformas', route: 'GmailAccounts'},
   {id: 'clipboard', name: 'Clipboard', icon: 'content-paste', desc: 'Links guardados y bóveda segura', route: 'Clipboard'},
   {id: 'focus', name: 'Enfoque', icon: 'timer', desc: 'Sesiones de trabajo profundo', route: 'Focus'},

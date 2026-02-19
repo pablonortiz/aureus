@@ -30,13 +30,29 @@ import {GalleryTrashScreen} from '../../features/gallery/screens/GalleryTrashScr
 import {RadarScreen} from '../../features/radar/screens/RadarScreen';
 import {RadarResultsScreen} from '../../features/radar/screens/RadarResultsScreen';
 import {RadarSavedScreen} from '../../features/radar/screens/RadarSavedScreen';
+import {TasksScreen} from '../../features/tasks/screens/TasksScreen';
+import {AddTaskScreen} from '../../features/tasks/screens/AddTaskScreen';
+import {EditTaskScreen} from '../../features/tasks/screens/EditTaskScreen';
+import {ManageTaskCategoriesScreen} from '../../features/tasks/screens/ManageTaskCategoriesScreen';
 import type {RootStackParamList} from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
+const linking = {
+  prefixes: ['aureus://'],
+  config: {
+    screens: {
+      Tasks: 'tasks',
+      AddTask: 'add-task',
+      EditTask: 'edit-task/:taskId',
+    },
+  },
+};
+
 export function RootNavigator() {
   return (
     <NavigationContainer
+      linking={linking}
       theme={{
         dark: true,
         colors: {
@@ -88,6 +104,10 @@ export function RootNavigator() {
         <Stack.Screen name="Radar" component={RadarScreen} />
         <Stack.Screen name="RadarResults" component={RadarResultsScreen} />
         <Stack.Screen name="RadarSaved" component={RadarSavedScreen} />
+        <Stack.Screen name="Tasks" component={TasksScreen} />
+        <Stack.Screen name="AddTask" component={AddTaskScreen} />
+        <Stack.Screen name="EditTask" component={EditTaskScreen} />
+        <Stack.Screen name="ManageTaskCategories" component={ManageTaskCategoriesScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

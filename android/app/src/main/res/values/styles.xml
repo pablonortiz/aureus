@@ -6,4 +6,11 @@
         <item name="android:editTextBackground">@drawable/rn_edit_text_material</item>
     </style>
 
+    <style name="WidgetConfigTheme" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowBackground">#1a1812</item>
+        <item name="android:colorPrimary">#e8ba30</item>
+        <item name="android:colorAccent">#e8ba30</item>
+        <item name="android:textColor">#f1f5f9</item>
+    </style>
+
 </resources>

@@ -158,6 +158,25 @@ export function useRecentActivity(limit = 6) {
         });
       }
 
+      // Tasks: recently completed tasks
+      const tasksResult = await db.execute(
+        `SELECT id, title, completed_at FROM tasks
+         WHERE is_completed = 1 AND completed_at IS NOT NULL
+         ORDER BY completed_at DESC LIMIT ?`,
+        [limit],
+      );
+      for (const row of tasksResult.rows) {
+        items.push({
+          id: `task-${row.id}`,
+          title: row.title as string,
+          module: 'Tareas',
+          icon: 'task-alt',
+          status: 'Completada',
+          statusColor: '#22c55e',
+          timestamp: row.completed_at as string,
+        });
+      }
+
       // Gmail: recent accounts
       const gmailResult = await db.execute(
         `SELECT id, email_prefix, created_at FROM gmail_accounts

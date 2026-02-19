@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Background -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#E6262420" />
+            <corners android:radius="16dp" />
+            <stroke android:width="1dp" android:color="#33e8ba30" />
+        </shape>
+    </item>
+
+    <!-- Gold header line (simulated title area) -->
+    <item
+        android:top="16dp"
+        android:left="16dp"
+        android:right="160dp"
+        android:bottom="140dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#e8ba30" />
+            <corners android:radius="3dp" />
+        </shape>
+    </item>
+
+    <!-- Subtitle line -->
+    <item
+        android:top="38dp"
+        android:left="16dp"
+        android:right="190dp"
+        android:bottom="126dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#64748b" />
+            <corners android:radius="2dp" />
+        </shape>
+    </item>
+
+    <!-- Add button circle -->
+    <item
+        android:top="16dp"
+        android:right="14dp"
+        android:left="230dp"
+        android:bottom="126dp">
+        <shape android:shape="oval">
+            <solid android:color="#e8ba30" />
+        </shape>
+    </item>
+
+    <!-- Divider -->
+    <item
+        android:top="54dp"
+        android:left="14dp"
+        android:right="14dp"
+        android:bottom="113dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#33e8ba30" />
+        </shape>
+    </item>
+
+    <!-- Task row 1 -->
+    <item
+        android:top="62dp"
+        android:left="14dp"
+        android:right="14dp"
+        android:bottom="75dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#1a1812" />
+            <corners android:radius="8dp" />
+        </shape>
+    </item>
+
+    <!-- Task row 1 - checkbox -->
+    <item
+        android:top="70dp"
+        android:left="22dp"
+        android:right="238dp"
+        android:bottom="83dp">
+        <shape android:shape="rectangle">
+            <solid android:color="@android:color/transparent" />
+            <stroke android:width="2dp" android:color="#4De8ba30" />
+            <corners android:radius="4dp" />
+        </shape>
+    </item>
+
+    <!-- Task row 1 - text line -->
+    <item
+        android:top="73dp"
+        android:left="50dp"
+        android:right="60dp"
+        android:bottom="86dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#94a3b8" />
+            <corners android:radius="2dp" />
+        </shape>
+    </item>
+
+    <!-- Task row 2 -->
+    <item
+        android:top="100dp"
+        android:left="14dp"
+        android:right="14dp"
+        android:bottom="37dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#1a1812" />
+            <corners android:radius="8dp" />
+        </shape>
+    </item>
+
+    <!-- Task row 2 - checkbox -->
+    <item
+        android:top="108dp"
+        android:left="22dp"
+        android:right="238dp"
+        android:bottom="45dp">
+        <shape android:shape="rectangle">
+            <solid android:color="@android:color/transparent" />
+            <stroke android:width="2dp" android:color="#4De8ba30" />
+            <corners android:radius="4dp" />
+        </shape>
+    </item>
+
+    <!-- Task row 2 - text line -->
+    <item
+        android:top="111dp"
+        android:left="50dp"
+        android:right="100dp"
+        android:bottom="48dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#94a3b8" />
+            <corners android:radius="2dp" />
+        </shape>
+    </item>
+
+    <!-- Task row 3 -->
+    <item
+        android:top="138dp"
+        android:left="14dp"
+        android:right="14dp"
+        android:bottom="0dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#1a1812" />
+            <corners android:radius="8dp" />
+        </shape>
+    </item>
+
+    <!-- Task row 3 - checkbox -->
+    <item
+        android:top="146dp"
+        android:left="22dp"
+        android:right="238dp"
+        android:bottom="8dp">
+        <shape android:shape="rectangle">
+            <solid android:color="@android:color/transparent" />
+            <stroke android:width="2dp" android:color="#4De8ba30" />
+            <corners android:radius="4dp" />
+        </shape>
+    </item>
+
+    <!-- Task row 3 - text line -->
+    <item
+        android:top="149dp"
+        android:left="50dp"
+        android:right="130dp"
+        android:bottom="11dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#94a3b8" />
+            <corners android:radius="2dp" />
+        </shape>
+    </item>
+
+</layer-list>

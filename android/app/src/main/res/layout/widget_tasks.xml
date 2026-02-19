@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/widget_background"
+    android:paddingStart="14dp"
+    android:paddingEnd="14dp"
+    android:paddingTop="16dp"
+    android:paddingBottom="8dp">
+
+    <!-- Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="10dp">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/widget_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="AUREUS TASKS"
+                android:textColor="#e8ba30"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.1" />
+
+            <TextView
+                android:id="@+id/widget_subtitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Todas las tareas"
+                android:textColor="#94a3b8"
+                android:textSize="11sp"
+                android:includeFontPadding="true"
+                android:layout_marginTop="2dp" />
+
+        </LinearLayout>
+
+        <ImageView
+            android:id="@+id/widget_add_button"
+            android:layout_width="34dp"
+            android:layout_height="34dp"
+            android:background="@drawable/widget_add_button"
+            android:src="@android:drawable/ic_input_add"
+            android:scaleType="centerInside"
+            android:padding="7dp"
+            android:contentDescription="Agregar tarea" />
+
+    </LinearLayout>
+
+    <!-- Divider -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#33e8ba30"
+        android:layout_marginBottom="8dp" />
+
+    <!-- Task list -->
+    <ListView
+        android:id="@+id/widget_task_list"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:divider="@android:color/transparent"
+        android:dividerHeight="4dp"
+        android:scrollbars="none" />
+
+    <!-- Empty state -->
+    <TextView
+        android:id="@+id/widget_empty_text"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:text="Sin tareas pendientes"
+        android:textColor="#64748b"
+        android:textSize="13sp"
+        android:gravity="center"
+        android:visibility="gone" />
+
+</LinearLayout>

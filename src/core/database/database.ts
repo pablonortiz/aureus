@@ -423,6 +423,86 @@ function runMigrations(database: DB): void {
     );
   `);
 
+  // Tasks module
+  database.executeSync(`
+    CREATE TABLE IF NOT EXISTS task_categories (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE,
+      color TEXT NOT NULL,
+      icon TEXT,
+      is_default INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+  `);
+
+  database.executeSync(`
+    CREATE TABLE IF NOT EXISTS task_recurring (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      priority TEXT NOT NULL DEFAULT 'medium' CHECK(priority IN ('high', 'medium', 'low')),
+      category_id INTEGER REFERENCES task_categories(id) ON DELETE SET NULL,
+      notes TEXT,
+      time TEXT,
+      frequency TEXT NOT NULL CHECK(frequency IN ('daily', 'weekly', 'monthly', 'custom')),
+      interval_days INTEGER,
+      end_date TEXT,
+      reminder_minutes INTEGER,
+      is_active INTEGER DEFAULT 1,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+  `);
+
+  database.executeSync(`
+    CREATE TABLE IF NOT EXISTS tasks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      title_normalized TEXT,
+      priority TEXT NOT NULL DEFAULT 'medium' CHECK(priority IN ('high', 'medium', 'low')),
+      date TEXT,
+      time TEXT,
+      category_id INTEGER REFERENCES task_categories(id) ON DELETE SET NULL,
+      notes TEXT,
+      is_completed INTEGER DEFAULT 0,
+      completed_at TEXT,
+      recurring_id INTEGER REFERENCES task_recurring(id) ON DELETE SET NULL,
+      reminder_minutes INTEGER,
+      notification_id TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+  `);
+
+  // Seed default task categories
+  const taskCatCount = database.executeSync(
+    'SELECT COUNT(*) as count FROM task_categories',
+  );
+  if (taskCatCount.rows[0].count === 0) {
+    const defaultTaskCategories = [
+      ['Trabajo', '#3b82f6', 'work', 1],
+      ['Personal', '#a855f7', 'person', 1],
+      ['Entrenamiento', '#f97316', 'fitness-center', 1],
+      ['Salud', '#DDA0DD', 'local-hospital', 1],
+      ['Finanzas', '#22c55e', 'account-balance-wallet', 1],
+      ['Aprendizaje', '#06b6d4', 'school', 1],
+      ['Otro', '#94a3b8', 'label', 1],
+    ];
+    for (const [name, color, icon, isDefault] of defaultTaskCategories) {
+      database.executeSync(
+        'INSERT OR IGNORE INTO task_categories (name, color, icon, is_default) VALUES (?, ?, ?, ?)',
+        [name, color, icon, isDefault],
+      );
+    }
+  }
+
+  // Add task_id column to focus_tasks (idempotent)
+  try {
+    database.executeSync(
+      'ALTER TABLE focus_tasks ADD COLUMN task_id INTEGER REFERENCES tasks(id) ON DELETE SET NULL',
+    );
+  } catch (_e) {
+    // Column already exists
+  }
+
   // Migrate clipboard_pin → app_pin (one-time)
   database.executeSync(
     "UPDATE app_settings SET key = 'app_pin' WHERE key = 'clipboard_pin'",

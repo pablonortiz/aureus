@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Aureus</string>
+    <string name="widget_description">Muestra tus tareas pendientes de Aureus</string>
 </resources>

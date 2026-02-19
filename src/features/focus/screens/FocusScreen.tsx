@@ -5,7 +5,8 @@ import {useNavigation} from '@react-navigation/native';
 import {colors, typography, fontFamily, borderRadius} from '../../../core/theme';
 import {Icon} from '../../../core/components';
 import {useFocusStore} from '../store/useFocusStore';
-import type {FocusTask} from '../../../core/types';
+import {useTasksStore} from '../../tasks/store/useTasksStore';
+import type {FocusTask, Task} from '../../../core/types';
 
 function formatTime(seconds: number): string {
   const mins = Math.floor(seconds / 60);
@@ -13,7 +14,13 @@ function formatTime(seconds: number): string {
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 }
 
-function TaskItem({task, onToggle}: {task: FocusTask; onToggle: () => void}) {
+function TaskItem({
+  task,
+  onToggle,
+}: {
+  task: FocusTask;
+  onToggle: () => void;
+}) {
   return (
     <Pressable onPress={onToggle} style={styles.taskItem}>
       <View
@@ -25,6 +32,9 @@ function TaskItem({task, onToggle}: {task: FocusTask; onToggle: () => void}) {
       <Text style={[styles.taskText, task.is_completed && styles.taskTextCompleted]}>
         {task.title}
       </Text>
+      {task.task_id && (
+        <Icon name="link" size={14} color={colors.textMuted} />
+      )}
     </Pressable>
   );
 }
@@ -38,11 +48,16 @@ export function FocusScreen() {
     totalSessions,
     timerSeconds,
     isRunning,
+    isBreak,
+    breakSeconds,
+    breakDuration,
     loadTasks,
     loadSessions,
     addTask,
+    addTaskFromModule,
     toggleTask,
     completeSession,
+    completeBreak,
     setTimerSeconds,
     setIsRunning,
     resetTimer,
@@ -52,8 +67,11 @@ export function FocusScreen() {
     loadSessionDuration,
   } = useFocusStore();
 
+  const {tasks: moduleTasks, loadTasks: loadModuleTasks} = useTasksStore();
+
   const [newTask, setNewTask] = useState('');
   const [showDurationPicker, setShowDurationPicker] = useState(false);
+  const [showTaskSelector, setShowTaskSelector] = useState(false);
   const durationOptions = [15, 20, 25, 30, 45, 60, 90];
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -63,15 +81,27 @@ export function FocusScreen() {
     loadSessionDuration();
   }, [loadTasks, loadSessions, loadSessionDuration]);
 
+  // Timer effect — handles both work and break
   useEffect(() => {
-    if (isRunning && timerSeconds > 0) {
-      intervalRef.current = setInterval(() => {
-        setTimerSeconds(timerSeconds - 1);
-      }, 1000);
-    } else if (timerSeconds === 0 && isRunning) {
-      setIsRunning(false);
-      completeSession();
-      Alert.alert('Sesión completada', '¡Buen trabajo! Tomá un descanso.');
+    if (isRunning) {
+      if (isBreak && breakSeconds > 0) {
+        intervalRef.current = setInterval(() => {
+          const currentBreak = useFocusStore.getState().breakSeconds;
+          if (currentBreak <= 1) {
+            useFocusStore.getState().completeBreak();
+            Alert.alert('Descanso terminado', '¡Arrancá la siguiente sesión!');
+          } else {
+            useFocusStore.setState({breakSeconds: currentBreak - 1});
+          }
+        }, 1000);
+      } else if (!isBreak && timerSeconds > 0) {
+        intervalRef.current = setInterval(() => {
+          setTimerSeconds(timerSeconds - 1);
+        }, 1000);
+      } else if (!isBreak && timerSeconds === 0) {
+        setIsRunning(false);
+        completeSession();
+      }
     }
 
     return () => {
@@ -79,7 +109,7 @@ export function FocusScreen() {
         clearInterval(intervalRef.current);
       }
     };
-  }, [isRunning, timerSeconds]);
+  }, [isRunning, timerSeconds, isBreak, breakSeconds]);
 
   const handleAddTask = async () => {
     if (!newTask.trim()) return;
@@ -87,16 +117,41 @@ export function FocusScreen() {
     setNewTask('');
   };
 
+  const handleOpenTaskSelector = () => {
+    loadModuleTasks();
+    setShowTaskSelector(true);
+  };
+
+  const handleSelectModuleTask = async (task: Task) => {
+    // Check if already added to focus today
+    const alreadyAdded = tasks.some(t => t.task_id === task.id);
+    if (alreadyAdded) {
+      Alert.alert('Ya agregada', 'Esta tarea ya está en tu enfoque de hoy.');
+      return;
+    }
+    await addTaskFromModule(task.id, task.title);
+    setShowTaskSelector(false);
+  };
+
   const completedTasks = tasks.filter(t => t.is_completed).length;
-  const progress = timerSeconds / (sessionDuration * 60);
+  const displaySeconds = isBreak ? breakSeconds : timerSeconds;
+  const progress = isBreak
+    ? breakSeconds / (breakDuration * 60)
+    : timerSeconds / (sessionDuration * 60);
+  const ringColor = isBreak ? colors.successGreen : (isRunning ? colors.primary : colors.borderGold);
+  const timerLabel = isBreak
+    ? `DESCANSO (${breakDuration} min)`
+    : 'MINUTOS RESTANTES';
 
   const handleSelectDuration = useCallback(async (minutes: number) => {
     await setSessionDuration(minutes);
     setShowDurationPicker(false);
   }, [setSessionDuration]);
-  // SVG-like circle progress using border trick
-  const circumference = 2 * Math.PI * 120;
-  const strokeDashoffset = circumference * (1 - (1 - progress));
+
+  // Available tasks from module (not already in focus today)
+  const availableModuleTasks = moduleTasks.filter(
+    mt => !tasks.some(ft => ft.task_id === mt.id),
+  );
 
   return (
     <View style={styles.container}>
@@ -106,14 +161,16 @@ export function FocusScreen() {
           <Icon name="chevron-left" size={24} color={colors.primary} />
         </Pressable>
         <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>DEEP WORK</Text>
+          <Text style={[styles.headerTitle, isBreak && {color: colors.successGreen}]}>
+            {isBreak ? 'DESCANSO' : 'DEEP WORK'}
+          </Text>
           <Text style={styles.headerSub}>
             Sesión {currentSession} de {totalSessions}
           </Text>
         </View>
         <Pressable
           style={styles.durationBadge}
-          onPress={() => !isRunning && setShowDurationPicker(true)}>
+          onPress={() => !isRunning && !isBreak && setShowDurationPicker(true)}>
           <Icon name="timer" size={16} color={colors.primary} />
           <Text style={styles.durationBadgeText}>{sessionDuration}m</Text>
         </Pressable>
@@ -125,13 +182,13 @@ export function FocusScreen() {
           <View
             style={[
               styles.timerRing,
-              {
-                borderColor: isRunning ? colors.primary : colors.borderGold,
-              },
+              {borderColor: ringColor},
             ]}
           />
-          <Text style={styles.timerText}>{formatTime(timerSeconds)}</Text>
-          <Text style={styles.timerLabel}>MINUTOS RESTANTES</Text>
+          <Text style={styles.timerText}>{formatTime(displaySeconds)}</Text>
+          <Text style={[styles.timerLabel, isBreak && {color: colors.successGreen}]}>
+            {timerLabel}
+          </Text>
         </View>
       </View>
 
@@ -156,18 +213,25 @@ export function FocusScreen() {
           }
         />
 
-        <Pressable style={styles.addTaskBtn} onPress={handleAddTask}>
-          <Icon name="add-circle-outline" size={18} color={colors.primary} />
-          <TextInput
-            style={styles.addTaskInput}
-            placeholder="Agregar tarea de enfoque"
-            placeholderTextColor={colors.primary}
-            value={newTask}
-            onChangeText={setNewTask}
-            onSubmitEditing={handleAddTask}
-            returnKeyType="done"
-          />
-        </Pressable>
+        <View style={styles.addTaskRow}>
+          <Pressable style={styles.addTaskBtn} onPress={handleAddTask}>
+            <Icon name="add-circle-outline" size={18} color={colors.primary} />
+            <TextInput
+              style={styles.addTaskInput}
+              placeholder="Agregar tarea de enfoque"
+              placeholderTextColor={colors.primary}
+              value={newTask}
+              onChangeText={setNewTask}
+              onSubmitEditing={handleAddTask}
+              returnKeyType="done"
+            />
+          </Pressable>
+          <Pressable
+            style={styles.linkBtn}
+            onPress={handleOpenTaskSelector}>
+            <Icon name="link" size={18} color={colors.primary} />
+          </Pressable>
+        </View>
       </View>
 
       {/* Controls */}
@@ -176,7 +240,7 @@ export function FocusScreen() {
           <Icon name="refresh" size={24} color={colors.primary} />
         </Pressable>
         <Pressable
-          style={styles.playBtn}
+          style={[styles.playBtn, isBreak && {backgroundColor: colors.successGreen}]}
           onPress={() => setIsRunning(!isRunning)}>
           <Icon
             name={isRunning ? 'pause' : 'play-arrow'}
@@ -226,6 +290,60 @@ export function FocusScreen() {
                 </Pressable>
               ))}
             </View>
+          </View>
+        </Pressable>
+      </Modal>
+
+      {/* Task Selector Modal */}
+      <Modal
+        visible={showTaskSelector}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowTaskSelector(false)}>
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setShowTaskSelector(false)}>
+          <View style={styles.selectorContent}>
+            <Text style={styles.modalTitle}>Agregar desde Tareas</Text>
+            {availableModuleTasks.length === 0 ? (
+              <Text style={styles.emptyText}>
+                No hay tareas pendientes disponibles
+              </Text>
+            ) : (
+              <FlatList
+                data={availableModuleTasks}
+                keyExtractor={item => String(item.id)}
+                style={styles.selectorList}
+                renderItem={({item}) => (
+                  <Pressable
+                    style={({pressed}) => [
+                      styles.selectorItem,
+                      pressed && styles.selectorItemPressed,
+                    ]}
+                    onPress={() => handleSelectModuleTask(item)}>
+                    <View style={styles.selectorItemLeft}>
+                      <Text style={styles.selectorItemTitle} numberOfLines={1}>
+                        {item.title}
+                      </Text>
+                      {item.category && (
+                        <View style={styles.selectorCategoryTag}>
+                          <View
+                            style={[
+                              styles.selectorCategoryDot,
+                              {backgroundColor: item.category.color},
+                            ]}
+                          />
+                          <Text style={styles.selectorCategoryText}>
+                            {item.category.name}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                    <Icon name="add" size={20} color={colors.primary} />
+                  </Pressable>
+                )}
+              />
+            )}
           </View>
         </Pressable>
       </Modal>
@@ -364,7 +482,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingVertical: 24,
   },
+  addTaskRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   addTaskBtn: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
@@ -376,6 +500,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.primary,
     padding: 0,
+  },
+  linkBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.borderGold,
   },
   controls: {
     flexDirection: 'row',
@@ -476,5 +610,55 @@ const styles = StyleSheet.create({
   },
   durationOptionTextActive: {
     color: colors.backgroundDark,
+  },
+  // Task selector modal
+  selectorContent: {
+    backgroundColor: colors.surfaceDark,
+    borderRadius: borderRadius.xl,
+    borderWidth: 1,
+    borderColor: colors.borderGold,
+    padding: 24,
+    width: '90%',
+    maxHeight: '60%',
+  },
+  selectorList: {
+    maxHeight: 300,
+  },
+  selectorItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: borderRadius.sm,
+    marginBottom: 4,
+  },
+  selectorItemPressed: {
+    backgroundColor: colors.primaryLight,
+  },
+  selectorItemLeft: {
+    flex: 1,
+    marginRight: 12,
+  },
+  selectorItemTitle: {
+    fontFamily: fontFamily.medium,
+    fontSize: 14,
+    color: colors.textPrimary,
+  },
+  selectorCategoryTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  selectorCategoryDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  selectorCategoryText: {
+    fontFamily: fontFamily.regular,
+    fontSize: 11,
+    color: colors.textSecondary,
   },
 });

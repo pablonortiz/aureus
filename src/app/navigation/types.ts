@@ -39,6 +39,10 @@ export type RootStackParamList = {
   Radar: undefined;
   RadarResults: {searchId: number};
   RadarSaved: {searchId: number};
+  Tasks: undefined;
+  AddTask: undefined;
+  EditTask: {taskId: number};
+  ManageTaskCategories: undefined;
 };
 
 export type MainTabParamList = {

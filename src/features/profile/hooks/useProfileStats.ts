@@ -10,6 +10,7 @@ export interface ProfileStats {
   searches: number;
   galleryItems: number;
   radarSearches: number;
+  pendingTasks: number;
 }
 
 export interface UsageSummary {
@@ -22,7 +23,7 @@ export interface UsageSummary {
 
 export function useProfileStats() {
   const [stats, setStats] = useState<ProfileStats>({
-    modules: 8,
+    modules: 9,
     links: 0,
     accounts: 0,
     monthExpenses: 0,
@@ -30,6 +31,7 @@ export function useProfileStats() {
     searches: 0,
     galleryItems: 0,
     radarSearches: 0,
+    pendingTasks: 0,
   });
   const [usage, setUsage] = useState<UsageSummary>({
     streakDays: 0,
@@ -98,8 +100,14 @@ export function useProfileStats() {
       );
       const radarCount = (radarResult.rows[0].count as number) || 0;
 
+      // Pending tasks
+      const pendingTasksResult = await db.execute(
+        'SELECT COUNT(*) as count FROM tasks WHERE is_completed = 0',
+      );
+      const pendingTasksCount = (pendingTasksResult.rows[0].count as number) || 0;
+
       setStats({
-        modules: 8,
+        modules: 9,
         links: linksCount,
         accounts: accountsCount,
         monthExpenses,
@@ -107,6 +115,7 @@ export function useProfileStats() {
         searches: searchesCount,
         galleryItems: galleryCount,
         radarSearches: radarCount,
+        pendingTasks: pendingTasksCount,
       });
 
       // --- Usage Summary ---
@@ -177,9 +186,11 @@ export function useProfileStats() {
             (SELECT COUNT(*) FROM gmail_accounts WHERE created_at >= ? AND created_at < ?) +
             (SELECT COUNT(*) FROM source_finder_searches WHERE created_at >= ? AND created_at < ?) +
             (SELECT COUNT(*) FROM gallery_media WHERE created_at >= ? AND created_at < ?) +
-            (SELECT COUNT(*) FROM radar_searches WHERE created_at >= ? AND created_at < ?)
+            (SELECT COUNT(*) FROM radar_searches WHERE created_at >= ? AND created_at < ?) +
+            (SELECT COUNT(*) FROM tasks WHERE created_at >= ? AND created_at < ?)
             as total`,
           [
+            dateStr, nextDateStr,
             dateStr, nextDateStr,
             dateStr, nextDateStr,
             dateStr, nextDateStr,

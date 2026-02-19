@@ -20,6 +20,7 @@ class MainApplication : Application(), ReactApplication {
           add(VaultImportPackage())
           add(GalleryPickerPackage())
           add(ShareReceiverPackage())
+          add(TasksWidgetPackage())
         },
     )
   }
