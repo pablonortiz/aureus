@@ -7,6 +7,7 @@ import {
   Pressable,
   Alert,
   Linking,
+  Clipboard,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
@@ -85,12 +86,23 @@ function ItemCard({
 
           <View style={styles.itemActions}>
             {!isNote && (
-              <Pressable
-                style={styles.itemAction}
-                onPress={() => Linking.openURL(item.url).catch(() => {})}>
-                <Icon name="open-in-new" size={14} color={colors.primary} />
-                <Text style={styles.itemActionText}>Visitar</Text>
-              </Pressable>
+              <>
+                <Pressable
+                  style={styles.itemAction}
+                  onPress={() => {
+                    Clipboard.setString(item.url);
+                    Alert.alert('Copiado', 'Link copiado al portapapeles');
+                  }}>
+                  <Icon name="content-copy" size={14} color={colors.primary} />
+                  <Text style={styles.itemActionText}>Copiar</Text>
+                </Pressable>
+                <Pressable
+                  style={styles.itemAction}
+                  onPress={() => Linking.openURL(item.url).catch(() => {})}>
+                  <Icon name="open-in-new" size={14} color={colors.primary} />
+                  <Text style={styles.itemActionText}>Visitar</Text>
+                </Pressable>
+              </>
             )}
             <Pressable style={styles.itemAction} onPress={onEdit}>
               <Icon name="edit" size={14} color={colors.primary} />
