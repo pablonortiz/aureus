@@ -10,6 +10,13 @@ import type {RootStackParamList} from '../../../app/navigation/types';
 
 type AddRecurringRoute = RouteProp<RootStackParamList, 'AddRecurring'>;
 
+type Frequency = 'monthly' | 'installment' | 'annual';
+
+const MONTH_NAMES = [
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+];
+
 function formatCurrency(raw: string): string {
   if (!raw) return '';
   const parts = raw.split(',');
@@ -53,6 +60,11 @@ export function AddRecurringScreen() {
   const isEditing = !!editId;
   const existing = isEditing ? recurring.find(r => r.id === editId) : null;
 
+  const defaultFreq = route.params?.defaultFrequency || 'monthly';
+
+  const [frequency, setFrequency] = useState<Frequency>(
+    (existing?.frequency as Frequency) || defaultFreq,
+  );
   const [title, setTitle] = useState(existing?.title || '');
   const [rawAmount, setRawAmount] = useState(
     existing ? amountToRaw(existing.amount) : '',
@@ -66,6 +78,22 @@ export function AddRecurringScreen() {
   const [selectedCategories, setSelectedCategories] = useState<number[]>(
     existing?.categories.map(c => c.id) || [],
   );
+  // Installment fields
+  const now = new Date();
+  const [totalInstallments, setTotalInstallments] = useState(
+    existing?.total_installments ? String(existing.total_installments) : '',
+  );
+  const [startMonth, setStartMonth] = useState(
+    existing?.start_month ? String(existing.start_month) : String(now.getMonth() + 1),
+  );
+  const [startYear, setStartYear] = useState(
+    existing?.start_year ? String(existing.start_year) : String(now.getFullYear()),
+  );
+  // Annual fields
+  const [monthOfYear, setMonthOfYear] = useState(
+    existing?.month_of_year ? String(existing.month_of_year) : String(now.getMonth() + 1),
+  );
+
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -76,11 +104,16 @@ export function AddRecurringScreen() {
   // Re-populate when existing data loads
   useEffect(() => {
     if (existing && !title) {
+      setFrequency((existing.frequency as Frequency) || 'monthly');
       setTitle(existing.title);
       setRawAmount(amountToRaw(existing.amount));
       setCurrency(existing.currency);
       setDayOfMonth(String(existing.day_of_month));
       setSelectedCategories(existing.categories.map(c => c.id));
+      if (existing.total_installments) setTotalInstallments(String(existing.total_installments));
+      if (existing.start_month) setStartMonth(String(existing.start_month));
+      if (existing.start_year) setStartYear(String(existing.start_year));
+      if (existing.month_of_year) setMonthOfYear(String(existing.month_of_year));
     }
   }, [existing]);
 
@@ -106,6 +139,15 @@ export function AddRecurringScreen() {
     }
   }, []);
 
+  const handleNumChange = useCallback((text: string, setter: (v: string) => void, max?: number) => {
+    const cleaned = text.replace(/[^0-9]/g, '');
+    if (max) {
+      const num = parseInt(cleaned, 10);
+      if (cleaned !== '' && num > max) return;
+    }
+    setter(cleaned);
+  }, []);
+
   const handleSave = async () => {
     if (!title.trim()) {
       Alert.alert('Error', 'Ingresá un título');
@@ -121,12 +163,50 @@ export function AddRecurringScreen() {
       Alert.alert('Error', 'Ingresá un día del mes válido (1-31)');
       return;
     }
+
+    let installmentsVal: number | null = null;
+    let startMonthVal: number | null = null;
+    let startYearVal: number | null = null;
+    let monthOfYearVal: number | null = null;
+
+    if (frequency === 'installment') {
+      installmentsVal = parseInt(totalInstallments, 10);
+      startMonthVal = parseInt(startMonth, 10);
+      startYearVal = parseInt(startYear, 10);
+      if (!installmentsVal || installmentsVal < 1) {
+        Alert.alert('Error', 'Ingresá la cantidad de cuotas');
+        return;
+      }
+      if (!startMonthVal || startMonthVal < 1 || startMonthVal > 12) {
+        Alert.alert('Error', 'Ingresá un mes de inicio válido (1-12)');
+        return;
+      }
+      if (!startYearVal || startYearVal < 2020) {
+        Alert.alert('Error', 'Ingresá un año de inicio válido');
+        return;
+      }
+    }
+
+    if (frequency === 'annual') {
+      monthOfYearVal = parseInt(monthOfYear, 10);
+      if (!monthOfYearVal || monthOfYearVal < 1 || monthOfYearVal > 12) {
+        Alert.alert('Error', 'Ingresá un mes válido (1-12)');
+        return;
+      }
+    }
+
     setLoading(true);
     try {
       if (isEditing) {
-        await updateRecurring(editId!, title, numAmount, currency, day, selectedCategories);
+        await updateRecurring(
+          editId!, title, numAmount, currency, day, selectedCategories,
+          frequency, installmentsVal, startMonthVal, startYearVal, monthOfYearVal,
+        );
       } else {
-        await addRecurring(title, numAmount, currency, day, selectedCategories);
+        await addRecurring(
+          title, numAmount, currency, day, selectedCategories,
+          frequency, installmentsVal, startMonthVal, startYearVal, monthOfYearVal,
+        );
       }
       navigation.goBack();
     } catch {
@@ -146,6 +226,24 @@ export function AddRecurringScreen() {
       />
 
       <ScrollView contentContainerStyle={[styles.content, {paddingBottom: 24 + insets.bottom}]}>
+        {/* Frequency toggle */}
+        <View style={styles.freqToggle}>
+          {(['monthly', 'installment', 'annual'] as Frequency[]).map(f => {
+            const isActive = frequency === f;
+            const label = f === 'monthly' ? 'Mensual' : f === 'installment' ? 'Cuotas' : 'Anual';
+            return (
+              <Pressable
+                key={f}
+                style={[styles.freqBtn, isActive && styles.freqBtnActive]}
+                onPress={() => setFrequency(f)}>
+                <Text style={[styles.freqBtnText, isActive && styles.freqBtnTextActive]}>
+                  {label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
         {/* Currency toggle */}
         <View style={styles.currencyToggle}>
           <Pressable
@@ -202,7 +300,9 @@ export function AddRecurringScreen() {
           />
         </View>
 
-        <Text style={[styles.label, {marginTop: 20}]}>Día del mes (1-31)</Text>
+        <Text style={[styles.label, {marginTop: 20}]}>
+          Día del mes (1-31)
+        </Text>
         <View style={styles.dayContainer}>
           <Icon name="calendar-today" size={20} color={colors.primary} />
           <TextInput
@@ -215,6 +315,80 @@ export function AddRecurringScreen() {
             maxLength={2}
           />
         </View>
+
+        {/* Installment-specific fields */}
+        {frequency === 'installment' && (
+          <>
+            <Text style={[styles.label, {marginTop: 20}]}>Cantidad de cuotas</Text>
+            <View style={styles.dayContainer}>
+              <Icon name="format-list-numbered" size={20} color={colors.primary} />
+              <TextInput
+                style={styles.dayInput}
+                placeholder="12"
+                placeholderTextColor={colors.textMuted}
+                value={totalInstallments}
+                onChangeText={t => handleNumChange(t, setTotalInstallments)}
+                keyboardType="number-pad"
+                maxLength={3}
+              />
+            </View>
+
+            <Text style={[styles.label, {marginTop: 20}]}>Mes y año de inicio</Text>
+            <View style={styles.startRow}>
+              <View style={[styles.dayContainer, {flex: 1}]}>
+                <TextInput
+                  style={styles.dayInput}
+                  placeholder="Mes (1-12)"
+                  placeholderTextColor={colors.textMuted}
+                  value={startMonth}
+                  onChangeText={t => handleNumChange(t, setStartMonth, 12)}
+                  keyboardType="number-pad"
+                  maxLength={2}
+                />
+              </View>
+              <View style={[styles.dayContainer, {flex: 1}]}>
+                <TextInput
+                  style={styles.dayInput}
+                  placeholder="Año"
+                  placeholderTextColor={colors.textMuted}
+                  value={startYear}
+                  onChangeText={t => handleNumChange(t, setStartYear)}
+                  keyboardType="number-pad"
+                  maxLength={4}
+                />
+              </View>
+            </View>
+            {startMonth && parseInt(startMonth, 10) >= 1 && parseInt(startMonth, 10) <= 12 && (
+              <Text style={styles.helperText}>
+                Inicio: {MONTH_NAMES[parseInt(startMonth, 10) - 1]} {startYear}
+              </Text>
+            )}
+          </>
+        )}
+
+        {/* Annual-specific fields */}
+        {frequency === 'annual' && (
+          <>
+            <Text style={[styles.label, {marginTop: 20}]}>Mes del año (1-12)</Text>
+            <View style={styles.dayContainer}>
+              <Icon name="event" size={20} color={colors.primary} />
+              <TextInput
+                style={styles.dayInput}
+                placeholder="6"
+                placeholderTextColor={colors.textMuted}
+                value={monthOfYear}
+                onChangeText={t => handleNumChange(t, setMonthOfYear, 12)}
+                keyboardType="number-pad"
+                maxLength={2}
+              />
+            </View>
+            {monthOfYear && parseInt(monthOfYear, 10) >= 1 && parseInt(monthOfYear, 10) <= 12 && (
+              <Text style={styles.helperText}>
+                Se cobra en {MONTH_NAMES[parseInt(monthOfYear, 10) - 1]}
+              </Text>
+            )}
+          </>
+        )}
 
         <Text style={[styles.label, {marginTop: 20}]}>
           Categorías{selectedCategories.length > 0 ? ` (${selectedCategories.length})` : ''}
@@ -279,6 +453,33 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 24,
+  },
+  freqToggle: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 20,
+  },
+  freqBtn: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    backgroundColor: colors.surfaceDark,
+  },
+  freqBtnActive: {
+    backgroundColor: colors.primaryLight,
+    borderColor: colors.primary,
+  },
+  freqBtnText: {
+    fontFamily: fontFamily.bold,
+    fontSize: 13,
+    color: colors.textMuted,
+  },
+  freqBtnTextActive: {
+    color: colors.primary,
   },
   currencyToggle: {
     flexDirection: 'row',
@@ -366,6 +567,16 @@ const styles = StyleSheet.create({
     fontSize: 22,
     color: colors.textPrimary,
     padding: 0,
+  },
+  startRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  helperText: {
+    fontFamily: fontFamily.medium,
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 6,
   },
   catGrid: {
     flexDirection: 'row',

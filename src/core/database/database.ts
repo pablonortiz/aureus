@@ -255,6 +255,22 @@ function runMigrations(database: DB): void {
     );
   `);
 
+  // Finance recurring: add frequency columns (idempotent)
+  const recurringAlterColumns = [
+    "ALTER TABLE finance_recurring ADD COLUMN frequency TEXT DEFAULT 'monthly'",
+    'ALTER TABLE finance_recurring ADD COLUMN total_installments INTEGER',
+    'ALTER TABLE finance_recurring ADD COLUMN start_month INTEGER',
+    'ALTER TABLE finance_recurring ADD COLUMN start_year INTEGER',
+    'ALTER TABLE finance_recurring ADD COLUMN month_of_year INTEGER',
+  ];
+  for (const sql of recurringAlterColumns) {
+    try {
+      database.executeSync(sql);
+    } catch (_e) {
+      // Column already exists — ignore
+    }
+  }
+
   // Source Finder module
   database.executeSync(`
     CREATE TABLE IF NOT EXISTS source_finder_searches (
@@ -442,6 +458,16 @@ function runMigrations(database: DB): void {
       );
     }
   }
+
+  // Ensure "Compras" category exists (for existing DBs)
+  database.executeSync(
+    "INSERT OR IGNORE INTO finance_categories (name, icon, color) VALUES ('Compras', 'shopping-bag', '#F59E0B')",
+  );
+
+  // Finance: default lookahead day for pending recurring chip
+  database.executeSync(
+    "INSERT OR IGNORE INTO app_settings (key, value) VALUES ('pending_lookahead_day', '5')",
+  );
 }
 
 export function closeDatabase(): void {

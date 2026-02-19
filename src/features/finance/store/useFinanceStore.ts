@@ -14,10 +14,14 @@ interface FinanceState {
   monthlyExpenses: number;
   exchangeRate: number | null;
   recurring: FinanceRecurring[];
+  pendingRecurringTotal: number;
+  pendingLookaheadDay: number;
   loading: boolean;
 
   loadTransactions: () => Promise<void>;
   loadCategories: () => Promise<void>;
+  loadPendingLookaheadDay: () => Promise<void>;
+  updatePendingLookaheadDay: (day: number) => Promise<void>;
   addTransaction: (
     title: string,
     amount: number,
@@ -40,6 +44,11 @@ interface FinanceState {
     currency: 'ARS' | 'USD',
     dayOfMonth: number,
     categoryIds: number[],
+    frequency?: 'monthly' | 'installment' | 'annual',
+    totalInstallments?: number | null,
+    startMonth?: number | null,
+    startYear?: number | null,
+    monthOfYear?: number | null,
   ) => Promise<void>;
   updateRecurring: (
     id: number,
@@ -48,12 +57,28 @@ interface FinanceState {
     currency: 'ARS' | 'USD',
     dayOfMonth: number,
     categoryIds: number[],
+    frequency?: 'monthly' | 'installment' | 'annual',
+    totalInstallments?: number | null,
+    startMonth?: number | null,
+    startYear?: number | null,
+    monthOfYear?: number | null,
+  ) => Promise<void>;
+  updateTransaction: (
+    id: number,
+    title: string,
+    amount: number,
+    type: 'income' | 'expense',
+    categoryIds: number[],
+    currency?: 'ARS' | 'USD',
+    notes?: string,
+    date?: string,
   ) => Promise<void>;
   deleteRecurring: (id: number) => Promise<void>;
   toggleRecurringActive: (id: number) => Promise<void>;
   confirmPendingTransaction: (id: number, finalAmount: number) => Promise<void>;
   dismissPendingTransaction: (id: number) => Promise<void>;
   generatePendingTransactions: () => Promise<void>;
+  loadPendingRecurringTotal: () => Promise<void>;
   getMonthExpenses: (year: number, month: number) => Promise<{daily: number[]; total: number}>;
   getTransactionsForMonth: (year: number, month: number) => Promise<FinanceTransaction[]>;
 }
@@ -65,6 +90,8 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
   monthlyExpenses: 0,
   exchangeRate: null,
   recurring: [],
+  pendingRecurringTotal: 0,
+  pendingLookaheadDay: 5,
   loading: false,
 
   loadTransactions: async () => {
@@ -209,6 +236,29 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
     set({exchangeRate: rate});
   },
 
+  loadPendingLookaheadDay: async () => {
+    const db = getDatabase();
+    const result = await db.execute(
+      "SELECT value FROM app_settings WHERE key = 'pending_lookahead_day'",
+    );
+    if (result.rows.length > 0) {
+      const day = parseInt(result.rows[0].value as string, 10);
+      if (day >= 1 && day <= 28) {
+        set({pendingLookaheadDay: day});
+      }
+    }
+  },
+
+  updatePendingLookaheadDay: async (day) => {
+    const db = getDatabase();
+    await db.execute(
+      "INSERT OR REPLACE INTO app_settings (key, value) VALUES ('pending_lookahead_day', ?)",
+      [String(day)],
+    );
+    set({pendingLookaheadDay: day});
+    await get().loadPendingRecurringTotal();
+  },
+
   loadRecurring: async () => {
     const db = getDatabase();
     const result = await db.execute(
@@ -227,6 +277,11 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
       recurring.push({
         ...row,
         is_active: Boolean(row.is_active),
+        frequency: (row.frequency as string) || 'monthly',
+        total_installments: (row.total_installments as number) ?? null,
+        start_month: (row.start_month as number) ?? null,
+        start_year: (row.start_year as number) ?? null,
+        month_of_year: (row.month_of_year as number) ?? null,
         categories: catResult.rows as FinanceCategory[],
       } as FinanceRecurring);
     }
@@ -234,11 +289,11 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
     set({recurring});
   },
 
-  addRecurring: async (title, amount, currency, dayOfMonth, categoryIds) => {
+  addRecurring: async (title, amount, currency, dayOfMonth, categoryIds, frequency = 'monthly', totalInstallments = null, startMonth = null, startYear = null, monthOfYear = null) => {
     const db = getDatabase();
     const result = await db.execute(
-      'INSERT INTO finance_recurring (title, amount, currency, type, day_of_month) VALUES (?, ?, ?, ?, ?)',
-      [title, amount, currency, 'expense', dayOfMonth],
+      'INSERT INTO finance_recurring (title, amount, currency, type, day_of_month, frequency, total_installments, start_month, start_year, month_of_year) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [title, amount, currency, 'expense', dayOfMonth, frequency, totalInstallments, startMonth, startYear, monthOfYear],
     );
 
     if (result.insertId && categoryIds.length > 0) {
@@ -253,11 +308,11 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
     await get().loadRecurring();
   },
 
-  updateRecurring: async (id, title, amount, currency, dayOfMonth, categoryIds) => {
+  updateRecurring: async (id, title, amount, currency, dayOfMonth, categoryIds, frequency = 'monthly', totalInstallments = null, startMonth = null, startYear = null, monthOfYear = null) => {
     const db = getDatabase();
     await db.execute(
-      'UPDATE finance_recurring SET title = ?, amount = ?, currency = ?, day_of_month = ? WHERE id = ?',
-      [title, amount, currency, dayOfMonth, id],
+      'UPDATE finance_recurring SET title = ?, amount = ?, currency = ?, day_of_month = ?, frequency = ?, total_installments = ?, start_month = ?, start_year = ?, month_of_year = ? WHERE id = ?',
+      [title, amount, currency, dayOfMonth, frequency, totalInstallments, startMonth, startYear, monthOfYear, id],
     );
 
     await db.execute(
@@ -308,7 +363,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
     const db = getDatabase();
     const now = new Date();
     const today = now.getDate();
-    const currentMonth = now.getMonth();
+    const currentMonth = now.getMonth(); // 0-indexed
     const currentYear = now.getFullYear();
     const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
 
@@ -320,21 +375,40 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
 
     for (const rec of recResult.rows) {
       const dayOfMonth = rec.day_of_month as number;
+      const frequency = (rec.frequency as string) || 'monthly';
+      const currency = rec.currency as string;
 
       if (dayOfMonth > daysInMonth) continue;
       if (today < dayOfMonth) continue;
 
+      // Check if tx already exists this month for this recurring
       const existing = await db.execute(
         "SELECT COUNT(*) as count FROM finance_transactions WHERE recurring_id = ? AND date >= ? AND date < ?",
         [rec.id, `${monthPrefix}-01`, `${monthPrefix}-${String(daysInMonth).padStart(2, '0')} 23:59:59`],
       );
-
       if ((existing.rows[0].count as number) > 0) continue;
 
-      let amount = rec.amount as number;
-      const currency = rec.currency as string;
+      // --- ANNUAL: only generate in the specified month ---
+      if (frequency === 'annual') {
+        const monthOfYear = rec.month_of_year as number; // 1-indexed
+        if ((currentMonth + 1) !== monthOfYear) continue;
+      }
 
-      if (currency === 'ARS') {
+      // --- INSTALLMENT: check if within range ---
+      let installmentLabel = '';
+      if (frequency === 'installment') {
+        const startMonth = rec.start_month as number; // 1-indexed
+        const startYear = rec.start_year as number;
+        const totalInstallments = rec.total_installments as number;
+        const installmentNum = (currentYear - startYear) * 12 + ((currentMonth + 1) - startMonth) + 1;
+        if (installmentNum < 1 || installmentNum > totalInstallments) continue;
+        installmentLabel = ` (${installmentNum}/${totalInstallments})`;
+      }
+
+      let amount = rec.amount as number;
+
+      // For monthly ARS, use the last confirmed amount if available
+      if (frequency === 'monthly' && currency === 'ARS') {
         const lastConfirmed = await db.execute(
           "SELECT amount FROM finance_transactions WHERE recurring_id = ? AND status = 'confirmed' AND currency = 'ARS' ORDER BY date DESC LIMIT 1",
           [rec.id],
@@ -358,9 +432,13 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
       );
       const categoryIds = catResult.rows.map(r => r.category_id as number);
 
+      const title = `${rec.title}${installmentLabel}`;
+      // Installments insert as confirmed; monthly/annual as pending
+      const status = frequency === 'installment' ? 'confirmed' : 'pending';
+
       const txResult = await db.execute(
-        "INSERT INTO finance_transactions (title, amount, type, currency, status, recurring_id, exchange_rate, date) VALUES (?, ?, 'expense', ?, 'pending', ?, ?, ?)",
-        [rec.title, amount, currency, rec.id, exchangeRateValue, txDatetime],
+        "INSERT INTO finance_transactions (title, amount, type, currency, status, recurring_id, exchange_rate, date) VALUES (?, ?, 'expense', ?, ?, ?, ?, ?)",
+        [title, amount, currency, status, rec.id, exchangeRateValue, txDatetime],
       );
 
       if (txResult.insertId && categoryIds.length > 0) {
@@ -371,6 +449,135 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
           );
         }
       }
+
+      // Auto-delete installment recurring after last installment
+      if (frequency === 'installment') {
+        const startMonth = rec.start_month as number;
+        const startYear = rec.start_year as number;
+        const totalInstallments = rec.total_installments as number;
+        const installmentNum = (currentYear - startYear) * 12 + ((currentMonth + 1) - startMonth) + 1;
+        if (installmentNum >= totalInstallments) {
+          await db.execute('DELETE FROM finance_recurring WHERE id = ?', [rec.id]);
+        }
+      }
+    }
+
+    await get().loadTransactions();
+  },
+
+  loadPendingRecurringTotal: async () => {
+    const db = getDatabase();
+    const rate = get().exchangeRate || 0;
+    const lookaheadDay = get().pendingLookaheadDay;
+    const now = new Date();
+    const currentMonth = now.getMonth(); // 0-indexed
+    const currentYear = now.getFullYear();
+    const monthPrefix = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+    // Next month (handles Dec → Jan year wrap)
+    const nextMonth = currentMonth === 11 ? 0 : currentMonth + 1;
+    const nextYear = currentMonth === 11 ? currentYear + 1 : currentYear;
+    const nextMonthPrefix = `${nextYear}-${String(nextMonth + 1).padStart(2, '0')}`;
+    const nextDaysInMonth = new Date(nextYear, nextMonth + 1, 0).getDate();
+
+    const recResult = await db.execute(
+      'SELECT * FROM finance_recurring WHERE is_active = 1',
+    );
+
+    let total = 0;
+
+    for (const rec of recResult.rows) {
+      const frequency = (rec.frequency as string) || 'monthly';
+      const dayOfMonth = rec.day_of_month as number;
+      const amount = rec.amount as number;
+      const currency = rec.currency as string;
+      const amountArs = currency === 'USD' ? amount * rate : amount;
+
+      // --- Current month: pending if no confirmed tx yet ---
+      const applicableThisMonth = (() => {
+        if (frequency === 'annual') {
+          return (currentMonth + 1) === (rec.month_of_year as number);
+        }
+        if (frequency === 'installment') {
+          const sm = rec.start_month as number;
+          const sy = rec.start_year as number;
+          const ti = rec.total_installments as number;
+          const num = (currentYear - sy) * 12 + ((currentMonth + 1) - sm) + 1;
+          return num >= 1 && num <= ti;
+        }
+        return true; // monthly
+      })();
+
+      if (applicableThisMonth) {
+        const confirmed = await db.execute(
+          "SELECT COUNT(*) as count FROM finance_transactions WHERE recurring_id = ? AND status = 'confirmed' AND date >= ? AND date < ?",
+          [rec.id, `${monthPrefix}-01`, `${monthPrefix}-${String(daysInMonth).padStart(2, '0')} 23:59:59`],
+        );
+        if ((confirmed.rows[0].count as number) === 0) {
+          total += amountArs;
+        }
+      }
+
+      // --- Next month lookahead: only if day_of_month <= lookaheadDay ---
+      if (dayOfMonth > lookaheadDay) continue;
+
+      const applicableNextMonth = (() => {
+        if (frequency === 'annual') {
+          return (nextMonth + 1) === (rec.month_of_year as number);
+        }
+        if (frequency === 'installment') {
+          const sm = rec.start_month as number;
+          const sy = rec.start_year as number;
+          const ti = rec.total_installments as number;
+          const num = (nextYear - sy) * 12 + ((nextMonth + 1) - sm) + 1;
+          return num >= 1 && num <= ti;
+        }
+        return true; // monthly
+      })();
+
+      if (applicableNextMonth) {
+        const confirmedNext = await db.execute(
+          "SELECT COUNT(*) as count FROM finance_transactions WHERE recurring_id = ? AND status = 'confirmed' AND date >= ? AND date < ?",
+          [rec.id, `${nextMonthPrefix}-01`, `${nextMonthPrefix}-${String(nextDaysInMonth).padStart(2, '0')} 23:59:59`],
+        );
+        if ((confirmedNext.rows[0].count as number) === 0) {
+          total += amountArs;
+        }
+      }
+    }
+
+    set({pendingRecurringTotal: total});
+  },
+
+  updateTransaction: async (id, title, amount, type, categoryIds, currency = 'ARS', notes, date) => {
+    const db = getDatabase();
+
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const dateForRate = date || todayStr;
+    const txDatetime = date ? `${date} 12:00:00` : `${todayStr} ${String(today.getHours()).padStart(2, '0')}:${String(today.getMinutes()).padStart(2, '0')}:${String(today.getSeconds()).padStart(2, '0')}`;
+
+    let exchangeRateValue: number | null = null;
+    if (currency === 'USD') {
+      exchangeRateValue = await getRateForDate(dateForRate);
+    }
+
+    await db.execute(
+      'UPDATE finance_transactions SET title = ?, amount = ?, type = ?, currency = ?, exchange_rate = ?, notes = ?, date = ? WHERE id = ?',
+      [title, amount, type, currency, exchangeRateValue, notes || null, txDatetime, id],
+    );
+
+    // Re-insert categories
+    await db.execute(
+      'DELETE FROM finance_transaction_categories WHERE transaction_id = ?',
+      [id],
+    );
+    for (const catId of categoryIds) {
+      await db.execute(
+        'INSERT INTO finance_transaction_categories (transaction_id, category_id) VALUES (?, ?)',
+        [id, catId],
+      );
     }
 
     await get().loadTransactions();

@@ -1,5 +1,5 @@
 import React, {useCallback, useEffect, useState} from 'react';
-import {StyleSheet, Text, View, ScrollView, Pressable, Alert} from 'react-native';
+import {StyleSheet, Text, View, ScrollView, Pressable, Alert, TextInput} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useNavigation, useFocusEffect} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
@@ -8,6 +8,10 @@ import {Icon, Button, EmptyState} from '../../../core/components';
 import {useFinanceStore} from '../store/useFinanceStore';
 import type {FinanceTransaction} from '../../../core/types';
 import type {RootStackParamList} from '../../../app/navigation/types';
+
+function normalizeText(text: string): string {
+  return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
 
 function formatArs(amount: number): string {
   return `$${Math.abs(amount).toLocaleString('es-AR', {
@@ -34,10 +38,12 @@ function TransactionItem({
   transaction,
   onDelete,
   onConfirmPending,
+  onEdit,
 }: {
   transaction: FinanceTransaction;
   onDelete: () => void;
   onConfirmPending: () => void;
+  onEdit: () => void;
 }) {
   const isExpense = transaction.type === 'expense';
   const isPending = transaction.status === 'pending';
@@ -61,7 +67,7 @@ function TransactionItem({
 
   return (
     <Pressable
-      onPress={isPending ? onConfirmPending : undefined}
+      onPress={isPending ? onConfirmPending : onEdit}
       onLongPress={onDelete}
       style={[styles.txItem, isPending && styles.txItemPending]}>
       <View
@@ -118,11 +124,15 @@ export function FinanceScreen() {
     totalBalance,
     monthlyExpenses,
     exchangeRate,
+    pendingRecurringTotal,
+    pendingLookaheadDay,
     loadCategories,
     deleteTransaction,
     loadExchangeRate,
     refreshExchangeRate,
     generatePendingTransactions,
+    loadPendingRecurringTotal,
+    loadPendingLookaheadDay,
     getMonthExpenses,
     getTransactionsForMonth,
   } = useFinanceStore();
@@ -164,8 +174,10 @@ export function FinanceScreen() {
     useCallback(() => {
       generatePendingTransactions();
       loadCategories();
-      loadExchangeRate();
-    }, [generatePendingTransactions, loadCategories, loadExchangeRate]),
+      loadPendingLookaheadDay().then(() =>
+        loadExchangeRate().then(() => loadPendingRecurringTotal()),
+      );
+    }, [generatePendingTransactions, loadCategories, loadPendingLookaheadDay, loadExchangeRate, loadPendingRecurringTotal]),
   );
 
   // Reload trend data and month transactions when month changes or transactions change
@@ -194,12 +206,26 @@ export function FinanceScreen() {
   };
 
   const [showAll, setShowAll] = useState(false);
+  const [txSearch, setTxSearch] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
   const PREVIEW_COUNT = 10;
 
+  const handleEdit = (tx: FinanceTransaction) => {
+    navigation.navigate('AddTransaction', {editTransactionId: tx.id});
+  };
+
+  const filterBySearch = (txs: FinanceTransaction[]) => {
+    if (!txSearch.trim()) return txs;
+    const needle = normalizeText(txSearch);
+    return txs.filter(t => normalizeText(t.title).includes(needle));
+  };
+
   const pendingTxs = transactions.filter(t => t.status === 'pending');
-  const allConfirmedTxs = transactions.filter(t => t.status === 'confirmed');
+  const allConfirmedTxs = filterBySearch(transactions.filter(t => t.status === 'confirmed'));
   const confirmedTxs = showAll ? allConfirmedTxs : allConfirmedTxs.slice(0, PREVIEW_COUNT);
   const hasMore = allConfirmedTxs.length > PREVIEW_COUNT;
+
+  const filteredMonthTxs = filterBySearch(monthTransactions);
 
   return (
     <View style={styles.container}>
@@ -240,6 +266,22 @@ export function FinanceScreen() {
               <Icon name="refresh" size={12} color={colors.textMuted} />
             </Pressable>
           )}
+
+          {/* Pending recurring badge */}
+          {pendingRecurringTotal > 0 && (() => {
+            const nextM = now.getMonth() === 11 ? 0 : now.getMonth() + 1;
+            const nextY = now.getMonth() === 11 ? now.getFullYear() + 1 : now.getFullYear();
+            const targetDate = new Date(nextY, nextM, pendingLookaheadDay);
+            const targetLabel = targetDate.toLocaleDateString('es-AR', {day: 'numeric', month: 'short'});
+            return (
+              <View style={styles.pendingRecBadge}>
+                <Icon name="autorenew" size={14} color={colors.primary} />
+                <Text style={styles.pendingRecText}>
+                  Pendiente hasta {targetLabel}: {formatArs(pendingRecurringTotal)}
+                </Text>
+              </View>
+            );
+          })()}
 
           {/* Monthly expenses */}
           {monthlyExpenses > 0 && (
@@ -311,7 +353,7 @@ export function FinanceScreen() {
         <View style={styles.txSection}>
           {isCurrentMonth ? (
             // Current month: pending + recent
-            pendingTxs.length === 0 && confirmedTxs.length === 0 ? (
+            pendingTxs.length === 0 && confirmedTxs.length === 0 && !txSearch ? (
               <>
                 <View style={styles.txHeader}>
                   <Text style={styles.txSectionTitle}>Transacciones Recientes</Text>
@@ -338,6 +380,7 @@ export function FinanceScreen() {
                           transaction={tx}
                           onDelete={() => handleDelete(tx.id)}
                           onConfirmPending={() => handleConfirmPending(tx)}
+                          onEdit={() => handleEdit(tx)}
                         />
                       ))}
                     </View>
@@ -345,14 +388,37 @@ export function FinanceScreen() {
                 )}
                 <View style={styles.txHeader}>
                   <Text style={styles.txSectionTitle}>Transacciones Recientes</Text>
-                  {hasMore && (
-                    <Pressable onPress={() => setShowAll(prev => !prev)}>
-                      <Text style={styles.viewAll}>
-                        {showAll ? 'VER MENOS' : 'VER TODO'}
-                      </Text>
+                  <View style={styles.txHeaderRight}>
+                    <Pressable onPress={() => { setShowSearch(s => !s); setTxSearch(''); }} hitSlop={8}>
+                      <Icon name={showSearch ? 'close' : 'search'} size={20} color={colors.primary} />
                     </Pressable>
-                  )}
+                    {hasMore && (
+                      <Pressable onPress={() => setShowAll(prev => !prev)}>
+                        <Text style={styles.viewAll}>
+                          {showAll ? 'VER MENOS' : 'VER TODO'}
+                        </Text>
+                      </Pressable>
+                    )}
+                  </View>
                 </View>
+                {showSearch && (
+                  <View style={styles.searchBar}>
+                    <Icon name="search" size={18} color={colors.textMuted} />
+                    <TextInput
+                      style={styles.searchInput}
+                      placeholder="Buscar transacción..."
+                      placeholderTextColor={colors.textMuted}
+                      value={txSearch}
+                      onChangeText={setTxSearch}
+                      autoFocus
+                    />
+                    {txSearch.length > 0 && (
+                      <Pressable onPress={() => setTxSearch('')} hitSlop={8}>
+                        <Icon name="close" size={16} color={colors.textMuted} />
+                      </Pressable>
+                    )}
+                  </View>
+                )}
                 <View style={styles.txList}>
                   {confirmedTxs.map(tx => (
                     <TransactionItem
@@ -360,6 +426,7 @@ export function FinanceScreen() {
                       transaction={tx}
                       onDelete={() => handleDelete(tx.id)}
                       onConfirmPending={() => handleConfirmPending(tx)}
+                      onEdit={() => handleEdit(tx)}
                     />
                   ))}
                 </View>
@@ -372,21 +439,43 @@ export function FinanceScreen() {
                 <Text style={styles.txSectionTitle}>
                   Transacciones de {trendMonthLabel}
                 </Text>
+                <Pressable onPress={() => { setShowSearch(s => !s); setTxSearch(''); }} hitSlop={8}>
+                  <Icon name={showSearch ? 'close' : 'search'} size={20} color={colors.primary} />
+                </Pressable>
               </View>
-              {monthTransactions.length === 0 ? (
+              {showSearch && (
+                <View style={styles.searchBar}>
+                  <Icon name="search" size={18} color={colors.textMuted} />
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder="Buscar transacción..."
+                    placeholderTextColor={colors.textMuted}
+                    value={txSearch}
+                    onChangeText={setTxSearch}
+                    autoFocus
+                  />
+                  {txSearch.length > 0 && (
+                    <Pressable onPress={() => setTxSearch('')} hitSlop={8}>
+                      <Icon name="close" size={16} color={colors.textMuted} />
+                    </Pressable>
+                  )}
+                </View>
+              )}
+              {filteredMonthTxs.length === 0 ? (
                 <EmptyState
                   icon="event-busy"
                   title="Sin transacciones"
-                  description={`No hay transacciones registradas en ${trendMonthLabel}.`}
+                  description={txSearch ? 'No se encontraron resultados.' : `No hay transacciones registradas en ${trendMonthLabel}.`}
                 />
               ) : (
                 <View style={styles.txList}>
-                  {monthTransactions.map(tx => (
+                  {filteredMonthTxs.map(tx => (
                     <TransactionItem
                       key={tx.id}
                       transaction={tx}
                       onDelete={() => handleDelete(tx.id)}
                       onConfirmPending={() => handleConfirmPending(tx)}
+                      onEdit={() => handleEdit(tx)}
                     />
                   ))}
                 </View>
@@ -494,6 +583,23 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.primary,
   },
+  pendingRecBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 10,
+    backgroundColor: colors.primaryLight,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: borderRadius.full,
+    borderWidth: 1,
+    borderColor: colors.borderGoldLight,
+  },
+  pendingRecText: {
+    fontFamily: fontFamily.semiBold,
+    fontSize: 13,
+    color: colors.primary,
+  },
   monthlyBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -583,6 +689,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
     marginTop: 8,
+  },
+  txHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: colors.surfaceDark,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    borderRadius: borderRadius.md,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginBottom: 12,
+  },
+  searchInput: {
+    flex: 1,
+    fontFamily: fontFamily.medium,
+    fontSize: 14,
+    color: colors.textPrimary,
+    padding: 0,
   },
   txList: {
     gap: 8,

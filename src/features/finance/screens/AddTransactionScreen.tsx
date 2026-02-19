@@ -8,6 +8,8 @@ import {colors, fontFamily, borderRadius} from '../../../core/theme';
 import {Button, Input, Header, Icon} from '../../../core/components';
 import {useFinanceStore} from '../store/useFinanceStore';
 import type {RootStackParamList} from '../../../app/navigation/types';
+import {getDatabase} from '../../../core/database';
+import type {FinanceCategory} from '../../../core/types';
 
 type AddTransactionRoute = RouteProp<RootStackParamList, 'AddTransaction'>;
 
@@ -48,6 +50,7 @@ export function AddTransactionScreen() {
   const insets = useSafeAreaInsets();
   const {
     addTransaction,
+    updateTransaction,
     categories,
     loadCategories,
     confirmPendingTransaction,
@@ -56,6 +59,7 @@ export function AddTransactionScreen() {
 
   const params = route.params;
   const isPendingMode = !!params?.pendingTransactionId;
+  const isEditMode = !!params?.editTransactionId;
 
   const [title, setTitle] = useState(params?.prefillTitle || '');
   const [rawAmount, setRawAmount] = useState(
@@ -71,6 +75,7 @@ export function AddTransactionScreen() {
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [editLoaded, setEditLoaded] = useState(false);
 
   const isToday = (() => {
     const now = new Date();
@@ -97,6 +102,36 @@ export function AddTransactionScreen() {
   useEffect(() => {
     loadCategories();
   }, [loadCategories]);
+
+  // Load existing transaction data for edit mode
+  useEffect(() => {
+    if (!isEditMode || editLoaded) return;
+    const loadEditData = async () => {
+      const db = getDatabase();
+      const txResult = await db.execute(
+        'SELECT * FROM finance_transactions WHERE id = ?',
+        [params!.editTransactionId!],
+      );
+      if (txResult.rows.length === 0) return;
+      const tx = txResult.rows[0];
+      setTitle(tx.title as string);
+      setRawAmount(amountToRaw(tx.amount as number));
+      setType((tx.type as string) as 'expense' | 'income');
+      setCurrency(((tx.currency as string) || 'ARS') as 'ARS' | 'USD');
+      if (tx.date) {
+        const d = new Date(tx.date as string);
+        if (!isNaN(d.getTime())) setDate(d);
+      }
+      // Load categories
+      const catResult = await db.execute(
+        'SELECT category_id FROM finance_transaction_categories WHERE transaction_id = ?',
+        [params!.editTransactionId!],
+      );
+      setSelectedCategories(catResult.rows.map(r => r.category_id as number));
+      setEditLoaded(true);
+    };
+    loadEditData();
+  }, [isEditMode, editLoaded, params]);
 
   const handleAmountChange = useCallback((text: string) => {
     // Strip everything except digits and comma
@@ -130,10 +165,17 @@ export function AddTransactionScreen() {
     }
     setLoading(true);
     try {
-      await addTransaction(
-        title, numAmount, type, selectedCategories, currency,
-        'confirmed', null, undefined, toDateStr(date),
-      );
+      if (isEditMode) {
+        await updateTransaction(
+          params!.editTransactionId!, title, numAmount, type,
+          selectedCategories, currency, undefined, toDateStr(date),
+        );
+      } else {
+        await addTransaction(
+          title, numAmount, type, selectedCategories, currency,
+          'confirmed', null, undefined, toDateStr(date),
+        );
+      }
       navigation.goBack();
     } catch {
       Alert.alert('Error', 'Error al guardar la transacción');
@@ -186,7 +228,7 @@ export function AddTransactionScreen() {
   return (
     <View style={styles.container}>
       <Header
-        title={isPendingMode ? 'Confirmar Transacción' : 'Nueva Transacción'}
+        title={isPendingMode ? 'Confirmar Transacción' : isEditMode ? 'Editar Transacción' : 'Nueva Transacción'}
         onBack={() => navigation.goBack()}
       />
 
@@ -385,7 +427,7 @@ export function AddTransactionScreen() {
           </View>
         ) : (
           <Button
-            title="Guardar transacción"
+            title={isEditMode ? 'Guardar cambios' : 'Guardar transacción'}
             onPress={handleAdd}
             icon="save"
             loading={loading}

@@ -117,6 +117,11 @@ export interface FinanceRecurring {
   type: 'expense';
   day_of_month: number;
   is_active: boolean;
+  frequency: 'monthly' | 'installment' | 'annual';
+  total_installments: number | null;
+  start_month: number | null;
+  start_year: number | null;
+  month_of_year: number | null;
   created_at: string;
   categories: FinanceCategory[];
 }

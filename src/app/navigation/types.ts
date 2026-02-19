@@ -23,9 +23,10 @@ export type RootStackParamList = {
     prefillAmount?: number;
     prefillCurrency?: 'ARS' | 'USD';
     prefillCategoryIds?: number[];
+    editTransactionId?: number;
   } | undefined;
   ManageRecurring: undefined;
-  AddRecurring: {recurringId?: number} | undefined;
+  AddRecurring: {recurringId?: number; defaultFrequency?: 'monthly' | 'installment' | 'annual'} | undefined;
   SourceFinder: undefined;
   SearchResult: {searchId: number};
   Calculator: undefined;
