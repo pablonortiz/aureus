@@ -69,9 +69,15 @@ function ItemCard({
               {item.content}
             </Text>
           ) : (
-            <Text style={styles.itemUrl} numberOfLines={1}>
-              {item.url}
-            </Text>
+            <Pressable
+              onPress={() => {
+                Clipboard.setString(item.url);
+                Alert.alert('Copiado', 'Link copiado al portapapeles');
+              }}>
+              <Text style={styles.itemUrl} numberOfLines={1}>
+                {item.url}
+              </Text>
+            </Pressable>
           )}
 
           {item.tags && item.tags.length > 0 && (
@@ -86,23 +92,12 @@ function ItemCard({
 
           <View style={styles.itemActions}>
             {!isNote && (
-              <>
-                <Pressable
-                  style={styles.itemAction}
-                  onPress={() => {
-                    Clipboard.setString(item.url);
-                    Alert.alert('Copiado', 'Link copiado al portapapeles');
-                  }}>
-                  <Icon name="content-copy" size={14} color={colors.primary} />
-                  <Text style={styles.itemActionText}>Copiar</Text>
-                </Pressable>
-                <Pressable
-                  style={styles.itemAction}
-                  onPress={() => Linking.openURL(item.url).catch(() => {})}>
-                  <Icon name="open-in-new" size={14} color={colors.primary} />
-                  <Text style={styles.itemActionText}>Visitar</Text>
-                </Pressable>
-              </>
+              <Pressable
+                style={styles.itemAction}
+                onPress={() => Linking.openURL(item.url).catch(() => {})}>
+                <Icon name="open-in-new" size={14} color={colors.primary} />
+                <Text style={styles.itemActionText}>Visitar</Text>
+              </Pressable>
             )}
             <Pressable style={styles.itemAction} onPress={onEdit}>
               <Icon name="edit" size={14} color={colors.primary} />
