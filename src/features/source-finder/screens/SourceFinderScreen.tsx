@@ -245,7 +245,7 @@ export function SourceFinderScreen() {
               <Text style={styles.emptyTitle}>Sin búsquedas</Text>
               <Text style={styles.emptyDesc}>
                 Pegá un link de Twitter/X con imágenes para identificar manga,
-                anime, doujinshi y más.
+                anime y más.
               </Text>
             </View>
           ) : null
