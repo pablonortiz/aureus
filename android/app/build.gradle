@@ -10,9 +10,6 @@ apply from: file("../../node_modules/react-native-vector-icons/fonts.gradle")
  * By default you don't need to apply any configuration, just uncomment the lines you need.
  */
 react {
-    /* Node */
-    nodeExecutableAndArgs = ["/Users/pablonortiz/.nvm/versions/node/v22.22.0/bin/node"]
-
     /* Folders */
     //   The root of your project, i.e. where "package.json" lives. Default is '../..'
     // root = file("../../")

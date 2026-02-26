@@ -28,6 +28,7 @@ build/
 .idea
 .gradle
 local.properties
+.gradle-env.sh
 *.iml
 *.hprof
 .cxx/
