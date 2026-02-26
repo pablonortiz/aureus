@@ -1,10 +1,11 @@
-import React, {useCallback} from 'react';
-import {StyleSheet, Text, View, ScrollView} from 'react-native';
+import React, {useCallback, useState} from 'react';
+import {StyleSheet, Text, View, ScrollView, Pressable, Modal, TextInput} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useFocusEffect} from '@react-navigation/native';
 import {colors, typography, fontFamily, borderRadius} from '../../../core/theme';
 import {Icon} from '../../../core/components';
 import {useProfileStats} from '../hooks/useProfileStats';
+import {useUserName} from '../../../core/hooks/useUserName';
 
 function formatARS(amount: number): string {
   if (amount >= 1000000) {
@@ -19,12 +20,29 @@ function formatARS(amount: number): string {
 export function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const {stats, usage, reload} = useProfileStats();
+  const {userName, setUserName, loadUserName} = useUserName();
 
   useFocusEffect(
     useCallback(() => {
       reload();
-    }, [reload]),
+      loadUserName();
+    }, [reload, loadUserName]),
   );
+
+  const [nameModalVisible, setNameModalVisible] = useState(false);
+  const [nameInput, setNameInput] = useState('');
+
+  const handleNamePress = () => {
+    setNameInput(userName);
+    setNameModalVisible(true);
+  };
+
+  const handleNameSave = () => {
+    if (nameInput.trim()) {
+      setUserName(nameInput.trim());
+    }
+    setNameModalVisible(false);
+  };
 
   const maxBar = Math.max(usage.monthExpenses, usage.monthIncome, 1);
   const expensePercent = (usage.monthExpenses / maxBar) * 100;
@@ -39,7 +57,9 @@ export function ProfileScreen() {
       <View style={styles.avatar}>
         <Icon name="person" size={48} color={colors.primary} />
       </View>
-      <Text style={styles.name}>Pablo</Text>
+      <Pressable onPress={handleNamePress}>
+        <Text style={styles.name}>{userName}</Text>
+      </Pressable>
       <Text style={styles.subtitle}>App personal</Text>
 
       {/* Salary card */}
@@ -186,6 +206,41 @@ export function ProfileScreen() {
       </View>
 
       <View style={{height: 100}} />
+
+      {/* Name Edit Modal */}
+      <Modal visible={nameModalVisible} transparent animationType="fade">
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setNameModalVisible(false)}>
+          <Pressable style={styles.modalContent} onPress={() => {}}>
+            <Text style={styles.modalTitle}>Cambiar nombre</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={nameInput}
+              onChangeText={setNameInput}
+              placeholder="Tu nombre"
+              placeholderTextColor={colors.textMuted}
+              autoFocus
+              maxLength={30}
+              onSubmitEditing={handleNameSave}
+            />
+            <View style={styles.modalButtons}>
+              <Pressable
+                style={styles.modalButton}
+                onPress={() => setNameModalVisible(false)}>
+                <Text style={styles.modalButtonText}>Cancelar</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.modalButton, styles.modalButtonPrimary]}
+                onPress={handleNameSave}>
+                <Text style={[styles.modalButtonText, styles.modalButtonTextPrimary]}>
+                  Guardar
+                </Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </ScrollView>
   );
 }
@@ -383,5 +438,59 @@ const styles = StyleSheet.create({
     fontSize: 12,
     width: 52,
     textAlign: 'right',
+  },
+
+  // Name Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: colors.cardDark,
+    borderRadius: borderRadius.xl,
+    padding: 24,
+    width: '85%',
+    borderWidth: 1,
+    borderColor: colors.borderGold,
+  },
+  modalTitle: {
+    ...typography.h3,
+    color: colors.textPrimary,
+    marginBottom: 16,
+  },
+  modalInput: {
+    backgroundColor: colors.surfaceDark,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontFamily: fontFamily.medium,
+    fontSize: 16,
+    color: colors.textPrimary,
+    marginBottom: 20,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+  },
+  modalButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: borderRadius.sm,
+  },
+  modalButtonPrimary: {
+    backgroundColor: colors.primary,
+  },
+  modalButtonText: {
+    fontFamily: fontFamily.semiBold,
+    fontSize: 14,
+    color: colors.textSecondary,
+  },
+  modalButtonTextPrimary: {
+    color: colors.backgroundDark,
   },
 });

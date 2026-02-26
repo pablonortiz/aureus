@@ -337,7 +337,7 @@ export function SettingsScreen() {
               <AboutRow label="Plataforma" value="Android" />
               <AboutRow label="Framework" value="React Native" />
               <AboutRow label="Base de datos" value="SQLite (local)" />
-              <AboutRow label="Desarrollador" value="Pablo" />
+              <AboutRow label="Desarrollador" value="Pablo Ortiz" />
             </View>
           </View>
         )}

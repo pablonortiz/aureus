@@ -8,6 +8,7 @@ import {Icon} from '../../../core/components';
 import type {RootStackParamList} from '../../../app/navigation/types';
 import type {ModuleDefinition} from '../../../core/types';
 import {useRecentActivity} from '../hooks/useRecentActivity';
+import {useUserName} from '../../../core/hooks/useUserName';
 
 const aureusLogo = require('../../../assets/images/aureus-logo.png');
 
@@ -93,12 +94,14 @@ export function HomeScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const {activities, reload} = useRecentActivity(6);
+  const {userName, loadUserName} = useUserName();
 
   // Reload activity feed every time the Home tab gets focus
   useFocusEffect(
     useCallback(() => {
       reload();
-    }, [reload]),
+      loadUserName();
+    }, [reload, loadUserName]),
   );
 
   const handleModulePress = useCallback(
@@ -129,7 +132,7 @@ export function HomeScreen() {
       {/* Welcome */}
       <View style={styles.welcome}>
         <Text style={styles.welcomeText}>
-          Bienvenido de vuelta, <Text style={styles.welcomeName}>Pablo</Text>
+          Bienvenido de vuelta, <Text style={styles.welcomeName}>{userName}</Text>
         </Text>
         <Text style={styles.welcomeSub}>Todo está en orden para tu día.</Text>
       </View>
