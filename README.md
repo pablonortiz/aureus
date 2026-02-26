@@ -1,104 +1,109 @@
-# AUREUS
+# Aureus
 
-Super app personal modular para Android. Un hub central con mini-apps que se van agregando segun necesidad. Todo local, sin backend, sin autenticacion.
+![React Native](https://img.shields.io/badge/React_Native-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
+![Android](https://img.shields.io/badge/Android-3DDC84?style=for-the-badge&logo=android&logoColor=white)
+![SQLite](https://img.shields.io/badge/SQLite-003B57?style=for-the-badge&logo=sqlite&logoColor=white)
+
+Modular personal super-app for Android. A central hub with self-contained mini-apps that are added as needed. Fully local — no backend, no authentication.
 
 ## Stack
 
 | | |
 |---|---|
-| Framework | React Native bare (sin Expo) |
-| Lenguaje | TypeScript estricto |
-| Plataforma | Android only |
-| Navegacion | React Navigation v7 (Stack + Bottom Tabs) |
-| Estado | Zustand |
-| Base de datos | SQLite (op-sqlite) |
-| Iconos | Material Symbols |
-| UI | Componentes custom, dark mode only |
-| Fuente | Manrope (6 pesos) |
+| Framework | React Native bare (no Expo) |
+| Language | TypeScript (strict) |
+| Platform | Android only |
+| Navigation | React Navigation v7 (Stack + Bottom Tabs) |
+| State | Zustand |
+| Database | SQLite (op-sqlite) |
+| Icons | Material Symbols |
+| UI | Custom components, dark mode only |
+| Font | Manrope (6 weights) |
 
-## Modulos
+## Modules
 
-### Finanzas
-Balance total en ARS con conversion USD blue automatica. Transacciones con categorias multiples, gastos recurrentes mensuales/cuotas/anuales, graficos de tendencia por mes, busqueda de transacciones, edicion de registros existentes. Chip de pagos pendientes con lookahead configurable al mes siguiente.
+### 💰 Finance
+Total balance in ARS with automatic USD blue conversion. Transactions with multiple categories, monthly/installment/annual recurring expenses, trend charts by month, transaction search, record editing. Pending payments chip with configurable lookahead.
 
-### Galeria Oculta
-Galeria privada protegida por PIN disfrazada como calculadora. Importa fotos/videos del dispositivo a un vault interno. Soporte para carpetas, categorias, favoritos, papelera, zoom, swipe entre medios, drag-select, busqueda por notas, y share target nativo de Android.
+### 🔒 Hidden Gallery
+PIN-protected private gallery disguised as a calculator. Imports photos/videos from the device into an internal vault. Support for folders, categories, favorites, trash, zoom, swipe between media, drag-select, note search, and native Android share target.
 
-### Clipboard Inteligente
-Gestor de links y notas con seccion publica y boveda privada (PIN). Organizado por carpetas y tags. Soporte para copiar, compartir y visitar links.
+### 📋 Smart Clipboard
+Link and note manager with a public section and a private vault (PIN). Organized by folders and tags. Copy, share, and visit links.
 
-### Gmail Accounts
-Tracker de en que plataformas esta registrado cada Gmail. Chips de estado pendiente/completado por plataforma, boton de agregar plataforma a todos los Gmails de una vez.
+### 📧 Gmail Accounts
+Tracks which platforms each Gmail address is registered on. Pending/completed status chips per platform, button to add a platform to all Gmail accounts at once.
 
-### Focus / Deep Work
-Timer Pomodoro con sesiones configurables. Lista de tareas de enfoque diarias con checkboxes. Tracking de sesiones completadas.
+### 🎯 Focus / Deep Work
+Pomodoro timer with configurable sessions. Daily focus task list with checkboxes. Completed session tracking.
 
-### Source Finder
-Busqueda inversa de imagenes desde tweets. Integracion con FxTwitter para extraer imagenes y SauceNAO para encontrar fuentes originales.
+### 🔍 Source Finder
+Reverse image search from tweets. Integration with FxTwitter for image extraction and SauceNAO for finding original sources.
 
-### Radar
-Generador de queries de busqueda potenciado por IA (Groq). Genera queries optimizados para multiples plataformas a partir de una descripcion. Busquedas guardables con notas.
+### 🤖 Radar
+AI-powered search query generator (Groq). Generates optimized queries for multiple platforms from a description. Searchable and saveable with notes.
 
-### Calculadora
-Calculadora basica que tambien funciona como pantalla de camuflaje para la galeria oculta.
+### 🧮 Calculator
+Basic calculator that also serves as a camouflage screen for the hidden gallery.
 
-## Arquitectura
+## Architecture
 
 ```
 src/
-├── app/                    # Entry point, navegacion, providers
+├── app/                    # Entry point, navigation, providers
 │   └── navigation/         # RootNavigator, MainTabNavigator, types
-├── core/                   # Codigo compartido
-│   ├── components/         # 11 componentes reutilizables
-│   ├── theme/              # Colores, tipografia, spacing, radios
-│   ├── database/           # SQLite setup y migraciones
+├── core/                   # Shared code
+│   ├── components/         # 11 reusable components
+│   ├── theme/              # Colors, typography, spacing, radii
+│   ├── database/           # SQLite setup and migrations
 │   ├── hooks/              # useAppPin
-│   └── types/              # Interfaces globales
-├── features/               # Modulos auto-contenidos
-│   ├── finance/            # Finanzas
-│   ├── gallery/            # Galeria oculta
-│   ├── clipboard/          # Clipboard inteligente
-│   ├── gmail-accounts/     # Gestor Gmail
-│   ├── focus/              # Pomodoro / Deep Work
-│   ├── source-finder/      # Busqueda inversa de imagenes
-│   ├── radar/              # Generador de queries IA
-│   ├── calculator/         # Calculadora / camuflaje
-│   ├── home/               # Dashboard
-│   ├── modules/            # Listado de modulos
-│   └── profile/            # Perfil y configuracion
-└── assets/                 # Fuentes, imagenes, iconos
+│   └── types/              # Global interfaces
+├── features/               # Self-contained modules
+│   ├── finance/
+│   ├── gallery/
+│   ├── clipboard/
+│   ├── gmail-accounts/
+│   ├── focus/
+│   ├── source-finder/
+│   ├── radar/
+│   ├── calculator/
+│   ├── home/
+│   ├── modules/
+│   └── profile/
+└── assets/                 # Fonts, images, icons
 ```
 
-Cada modulo sigue el patron:
+Each module follows the pattern:
 ```
 feature/
-├── screens/      # Pantallas de navegacion
-├── components/   # Componentes propios
+├── screens/      # Navigation screens
+├── components/   # Feature-specific components
 ├── hooks/        # Custom hooks
 ├── store/        # Zustand slice
-├── services/     # APIs externas
-├── database/     # Queries SQLite
+├── services/     # External APIs
+├── database/     # SQLite queries
 └── types/        # TypeScript interfaces
 ```
 
 ## Design System
 
-- **Tema:** Dark mode exclusivo
-- **Color primario:** `#e8ba30` (dorado)
-- **Fondos:** `#1a1812` (principal), `#26241c` (superficies), `#1e1e1e` (cards)
-- **Fuente:** Manrope (300-800)
-- **Componentes:** Button, Card, Chip, EmptyState, FAB, Header, Icon, Input, PinLock, SectionTitle
-- **Efectos:** Glass blur en headers, glow dorado en FAB, bordes sutiles
+- **Theme:** Dark mode only
+- **Primary color:** `#e8ba30` (gold)
+- **Backgrounds:** `#1a1812` (main), `#26241c` (surfaces), `#1e1e1e` (cards)
+- **Font:** Manrope (300–800)
+- **Components:** Button, Card, Chip, EmptyState, FAB, Header, Icon, Input, PinLock, SectionTitle
+- **Effects:** Glass blur on headers, gold glow on FAB, subtle borders
 
 ## Setup
 
-**Requisitos:** Node >= 22, Android SDK, JDK 17
+**Requirements:** Node >= 22, Android SDK, JDK 17
 
 ```bash
-# Instalar dependencias
+# Install dependencies
 npm install
 
-# Correr en desarrollo
+# Run in development
 npm start
 npm run android
 
@@ -107,27 +112,21 @@ cd android && ./gradlew assembleRelease
 # Output: android/app/build/outputs/apk/release/app-release.apk
 ```
 
-## Base de Datos
+## Database
 
-SQLite local con ~20 tablas. Migraciones idempotentes en `src/core/database/database.ts`. Foreign keys habilitadas, CASCADE deletes, seeds automaticos para categorias y settings.
+Local SQLite with ~20 tables. Idempotent migrations in `src/core/database/database.ts`. Foreign keys enabled, CASCADE deletes, automatic seeds for categories and settings.
 
-Tablas principales: `app_settings`, `gmail_accounts`, `platforms`, `clipboard_links`, `clipboard_folders`, `finance_transactions`, `finance_recurring`, `finance_categories`, `focus_tasks`, `focus_sessions`, `gallery_media`, `gallery_folders`, `source_finder_searches`, `radar_searches`.
+Main tables: `app_settings`, `gmail_accounts`, `platforms`, `clipboard_links`, `clipboard_folders`, `finance_transactions`, `finance_recurring`, `finance_categories`, `focus_tasks`, `focus_sessions`, `gallery_media`, `gallery_folders`, `source_finder_searches`, `radar_searches`.
 
-## Servicios Externos
+## External Services
 
-| Servicio | Uso |
-|----------|-----|
-| Dolar Blue API | Cotizacion USD para finanzas |
-| SauceNAO | Busqueda inversa de imagenes |
-| FxTwitter | Extraccion de imagenes de tweets |
-| Groq API | Generacion de queries IA (Radar) |
+| Service | Purpose |
+|---|---|
+| Dolar Blue API | USD exchange rate for finance |
+| SauceNAO | Reverse image search |
+| FxTwitter | Tweet image extraction |
+| Groq API | AI query generation (Radar) |
 
-## Convenciones
+## License
 
-- UI en **espanol**, codigo en **ingles**
-- Commits: conventional commits en ingles (`feat:`, `fix:`, `chore:`)
-- Archivos: PascalCase para componentes, camelCase para hooks/utils
-- Screens: `[Nombre]Screen.tsx`
-- Stores: `use[Feature]Store.ts`
-- Hooks: `use[Nombre].ts`
-- Todo es local, sin backend ni autenticacion
+MIT
