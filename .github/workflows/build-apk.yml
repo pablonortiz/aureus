@@ -22,9 +22,17 @@ jobs:
           java-version: 21
           cache: gradle
 
+      - uses: actions/cache@v4
+        with:
+          path: |
+            android/.gradle
+            android/app/build
+          key: gradle-build-${{ hashFiles('android/app/build.gradle', 'android/gradle.properties', 'package-lock.json') }}
+          restore-keys: gradle-build-
+
       - run: npm ci
 
-      - run: cd android && ./gradlew assembleRelease --no-daemon
+      - run: cd android && ./gradlew assembleRelease
 
       - uses: actions/upload-artifact@v4
         with:
