@@ -284,6 +284,12 @@ export function MediaViewerScreen() {
               controls
               resizeMode="contain"
               paused={false}
+              bufferConfig={{
+                minBufferMs: 2000,
+                maxBufferMs: 5000,
+                bufferForPlaybackMs: 1000,
+                bufferForPlaybackAfterRebufferMs: 2000,
+              }}
             />
           </ZoomableView>
         </View>
