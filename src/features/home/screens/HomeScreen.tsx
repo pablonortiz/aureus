@@ -14,18 +14,11 @@ const aureusLogo = require('../../../assets/images/aureus-logo.png');
 
 const modules: ModuleDefinition[] = [
   {
-    id: 'tasks',
-    name: 'Tareas',
-    icon: 'task-alt',
-    description: 'Tu lista de pendientes',
-    route: 'Tasks',
-  },
-  {
-    id: 'gmail',
-    name: 'Gmail',
-    icon: 'email',
-    description: 'Gestionar cuentas',
-    route: 'GmailAccounts',
+    id: 'finance',
+    name: 'Finanzas',
+    icon: 'account-balance-wallet',
+    description: 'Revisá tu balance',
+    route: 'Finance',
   },
   {
     id: 'clipboard',
@@ -35,18 +28,11 @@ const modules: ModuleDefinition[] = [
     route: 'Clipboard',
   },
   {
-    id: 'focus',
-    name: 'Enfoque',
-    icon: 'check-circle',
-    description: 'Sesión de trabajo',
-    route: 'Focus',
-  },
-  {
-    id: 'finance',
-    name: 'Finanzas',
-    icon: 'account-balance-wallet',
-    description: 'Revisá tu balance',
-    route: 'Finance',
+    id: 'tasks',
+    name: 'Tareas',
+    icon: 'task-alt',
+    description: 'Tu lista de pendientes',
+    route: 'Tasks',
   },
   {
     id: 'source-finder',
@@ -56,11 +42,11 @@ const modules: ModuleDefinition[] = [
     route: 'SourceFinder',
   },
   {
-    id: 'calculator',
-    name: 'Calculadora',
-    icon: 'calculate',
-    description: 'Calculadora',
-    route: 'Calculator',
+    id: 'focus',
+    name: 'Enfoque',
+    icon: 'check-circle',
+    description: 'Sesión de trabajo',
+    route: 'Focus',
   },
   {
     id: 'radar',
@@ -68,6 +54,20 @@ const modules: ModuleDefinition[] = [
     icon: 'radar',
     description: 'Búsqueda en tiempo real',
     route: 'Radar',
+  },
+  {
+    id: 'calculator',
+    name: 'Calculadora',
+    icon: 'calculate',
+    description: 'Calculadora',
+    route: 'Calculator',
+  },
+  {
+    id: 'gmail',
+    name: 'Gmail',
+    icon: 'email',
+    description: 'Gestionar cuentas',
+    route: 'GmailAccounts',
   },
 ];
 
