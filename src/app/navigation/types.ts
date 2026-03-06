@@ -26,6 +26,7 @@ export type RootStackParamList = {
     editTransactionId?: number;
   } | undefined;
   FinanceSettings: undefined;
+  FinanceStats: undefined;
   ManageRecurring: undefined;
   AddRecurring: {recurringId?: number; defaultFrequency?: 'monthly' | 'installment' | 'annual'} | undefined;
   SourceFinder: undefined;

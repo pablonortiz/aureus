@@ -303,12 +303,19 @@ export function FinanceScreen() {
           </Pressable>
           <Text style={styles.title}>Finanzas</Text>
         </View>
-        <Pressable
-          onPress={() => navigation.navigate('ManageRecurring')}
-          style={styles.recurringBtn}>
-          <Icon name="autorenew" size={20} color={colors.primary} />
-          <Text style={styles.recurringBtnText}>Recurrentes</Text>
-        </Pressable>
+        <View style={styles.headerBtns}>
+          <Pressable
+            onPress={() => navigation.navigate('FinanceStats')}
+            style={styles.headerIconBtn}>
+            <Icon name="pie-chart" size={20} color={colors.primary} />
+          </Pressable>
+          <Pressable
+            onPress={() => navigation.navigate('ManageRecurring')}
+            style={styles.recurringBtn}>
+            <Icon name="autorenew" size={20} color={colors.primary} />
+            <Text style={styles.recurringBtnText}>Recurrentes</Text>
+          </Pressable>
+        </View>
       </View>
 
       <ScrollView
@@ -611,6 +618,21 @@ const styles = StyleSheet.create({
   title: {
     ...typography.h2,
     color: colors.textPrimary,
+  },
+  headerBtns: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerIconBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 1,
+    borderColor: colors.borderGold,
+    backgroundColor: colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   recurringBtn: {
     flexDirection: 'row',

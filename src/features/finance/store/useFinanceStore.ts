@@ -85,6 +85,7 @@ interface FinanceState {
   loadPendingRecurringTotal: () => Promise<void>;
   getMonthExpenses: (year: number, month: number) => Promise<{daily: number[]; total: number}>;
   getTransactionsForMonth: (year: number, month: number) => Promise<FinanceTransaction[]>;
+  getExpensesByCategory: (year: number, month: number) => Promise<{category: FinanceCategory; total: number}[]>;
 }
 
 export const useFinanceStore = create<FinanceState>((set, get) => ({
@@ -702,5 +703,36 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
     }
 
     return transactions;
+  },
+
+  getExpensesByCategory: async (year, month) => {
+    const db = getDatabase();
+    const prefix = `${year}-${String(month).padStart(2, '0')}`;
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const startDate = `${prefix}-01`;
+    const endDate = `${prefix}-${String(daysInMonth).padStart(2, '0')} 23:59:59`;
+
+    const result = await db.execute(
+      `SELECT fc.id, fc.name, fc.icon, fc.color,
+              SUM(CASE WHEN ft.currency = 'USD' THEN ft.amount * COALESCE(ft.exchange_rate, 1) ELSE ft.amount END) as total
+       FROM finance_transactions ft
+       JOIN finance_transaction_categories ftc ON ftc.transaction_id = ft.id
+       JOIN finance_categories fc ON fc.id = ftc.category_id
+       WHERE ft.type = 'expense' AND ft.status = 'confirmed'
+         AND ft.date >= ? AND ft.date <= ?
+       GROUP BY fc.id
+       ORDER BY total DESC`,
+      [startDate, endDate],
+    );
+
+    return result.rows.map(row => ({
+      category: {
+        id: row.id as number,
+        name: row.name as string,
+        icon: (row.icon as string) || null,
+        color: (row.color as string) || null,
+      },
+      total: row.total as number,
+    }));
   },
 }));

@@ -117,6 +117,7 @@ function RecurringItem({
 }
 
 type TabType = 'monthly' | 'annual';
+type MonthlyFilter = 'all' | 'monthly' | 'installment';
 
 export function ManageRecurringScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -132,6 +133,7 @@ export function ManageRecurringScreen() {
   } = useFinanceStore();
 
   const [activeTab, setActiveTab] = useState<TabType>('monthly');
+  const [monthlyFilter, setMonthlyFilter] = useState<MonthlyFilter>('all');
 
   useEffect(() => {
     loadRecurring();
@@ -152,10 +154,15 @@ export function ManageRecurringScreen() {
 
   const monthlyItems = recurring.filter(r => {
     const freq = r.frequency || 'monthly';
+    if (monthlyFilter === 'monthly') return freq === 'monthly';
+    if (monthlyFilter === 'installment') return freq === 'installment';
     return freq === 'monthly' || freq === 'installment';
   });
   const annualItems = recurring.filter(r => r.frequency === 'annual');
   const displayItems = activeTab === 'monthly' ? monthlyItems : annualItems;
+
+  const monthlyCount = recurring.filter(r => (r.frequency || 'monthly') === 'monthly').length;
+  const installmentCount = recurring.filter(r => r.frequency === 'installment').length;
 
   const defaultFrequency = activeTab === 'annual' ? 'annual' : 'monthly';
 
@@ -190,6 +197,26 @@ export function ManageRecurringScreen() {
           </Text>
         </Pressable>
       </View>
+
+      {/* Sub-filter chips for monthly tab */}
+      {activeTab === 'monthly' && (
+        <View style={styles.filterRow}>
+          {([
+            {key: 'all' as MonthlyFilter, label: 'Todos'},
+            {key: 'monthly' as MonthlyFilter, label: `Mensuales${monthlyCount > 0 ? ` (${monthlyCount})` : ''}`},
+            {key: 'installment' as MonthlyFilter, label: `Cuotas${installmentCount > 0 ? ` (${installmentCount})` : ''}`},
+          ]).map(f => (
+            <Pressable
+              key={f.key}
+              style={[styles.filterChip, monthlyFilter === f.key && styles.filterChipActive]}
+              onPress={() => setMonthlyFilter(f.key)}>
+              <Text style={[styles.filterChipText, monthlyFilter === f.key && styles.filterChipTextActive]}>
+                {f.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
 
       {/* Total chip */}
       {displayItems.filter(i => i.is_active).length > 0 && (
@@ -268,6 +295,32 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
   tabTextActive: {
+    color: colors.primary,
+  },
+  filterRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    gap: 8,
+  },
+  filterChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.surfaceDark,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+  },
+  filterChipActive: {
+    backgroundColor: colors.primaryLight,
+    borderColor: colors.borderGold,
+  },
+  filterChipText: {
+    fontFamily: fontFamily.semiBold,
+    fontSize: 12,
+    color: colors.textMuted,
+  },
+  filterChipTextActive: {
     color: colors.primary,
   },
   totalChipContainer: {
