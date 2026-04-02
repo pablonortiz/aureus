@@ -20,6 +20,7 @@ import {FinanceSettingsScreen} from '../../features/finance/screens/FinanceSetti
 import {ManageRecurringScreen} from '../../features/finance/screens/ManageRecurringScreen';
 import {AddRecurringScreen} from '../../features/finance/screens/AddRecurringScreen';
 import {FinanceStatsScreen} from '../../features/finance/screens/FinanceStatsScreen';
+import {PendingForecastScreen} from '../../features/finance/screens/PendingForecastScreen';
 import {SourceFinderScreen} from '../../features/source-finder/screens/SourceFinderScreen';
 import {SearchResultScreen} from '../../features/source-finder/screens/SearchResultScreen';
 import {CalculatorScreen} from '../../features/calculator/screens/CalculatorScreen';
@@ -95,6 +96,7 @@ export function RootNavigator() {
         <Stack.Screen name="ManageRecurring" component={ManageRecurringScreen} />
         <Stack.Screen name="AddRecurring" component={AddRecurringScreen} />
         <Stack.Screen name="FinanceStats" component={FinanceStatsScreen} />
+        <Stack.Screen name="PendingForecast" component={PendingForecastScreen} />
         <Stack.Screen name="SourceFinder" component={SourceFinderScreen} />
         <Stack.Screen name="SearchResult" component={SearchResultScreen} />
         <Stack.Screen name="Calculator" component={CalculatorScreen} />

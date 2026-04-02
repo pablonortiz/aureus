@@ -86,6 +86,7 @@ interface FinanceState {
   getMonthExpenses: (year: number, month: number) => Promise<{daily: number[]; total: number}>;
   getTransactionsForMonth: (year: number, month: number) => Promise<FinanceTransaction[]>;
   getExpensesByCategory: (year: number, month: number) => Promise<{category: FinanceCategory; total: number}[]>;
+  getPendingUntilDate: (targetDate: Date) => Promise<{total: number; items: {title: string; amount: number; currency: string; amountArs: number; dueDate: Date; categoryIcon?: string; categoryColor?: string}[]}>;
 }
 
 export const useFinanceStore = create<FinanceState>((set, get) => ({
@@ -734,5 +735,117 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
       },
       total: row.total as number,
     }));
+  },
+
+  getPendingUntilDate: async (targetDate: Date) => {
+    const db = getDatabase();
+    const rate = get().exchangeRate || 0;
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const target = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+
+    if (target <= today) {
+      return {total: 0, items: []};
+    }
+
+    const recResult = await db.execute(
+      'SELECT * FROM finance_recurring WHERE is_active = 1',
+    );
+
+    // Load first category for each recurring (for display)
+    const categoryCache: Record<number, {icon?: string; color?: string}> = {};
+    for (const rec of recResult.rows) {
+      const catRes = await db.execute(
+        `SELECT fc.icon, fc.color FROM finance_categories fc
+         JOIN finance_recurring_categories frc ON frc.category_id = fc.id
+         WHERE frc.recurring_id = ? LIMIT 1`,
+        [rec.id],
+      );
+      if (catRes.rows.length > 0) {
+        categoryCache[rec.id as number] = {
+          icon: (catRes.rows[0].icon as string) || undefined,
+          color: (catRes.rows[0].color as string) || undefined,
+        };
+      }
+    }
+
+    let total = 0;
+    const items: {title: string; amount: number; currency: string; amountArs: number; dueDate: Date; categoryIcon?: string; categoryColor?: string}[] = [];
+
+    // Iterate month by month from current month to target month
+    let iterYear = now.getFullYear();
+    let iterMonth = now.getMonth(); // 0-indexed
+    const targetYear = target.getFullYear();
+    const targetMonth = target.getMonth();
+
+    while (iterYear < targetYear || (iterYear === targetYear && iterMonth <= targetMonth)) {
+      const monthPrefix = `${iterYear}-${String(iterMonth + 1).padStart(2, '0')}`;
+      const daysInMonth = new Date(iterYear, iterMonth + 1, 0).getDate();
+
+      for (const rec of recResult.rows) {
+        const frequency = (rec.frequency as string) || 'monthly';
+        const dayOfMonth = Math.min(rec.day_of_month as number, daysInMonth);
+        const amount = rec.amount as number;
+        const currency = rec.currency as string;
+        const amountArs = currency === 'USD' ? amount * rate : amount;
+        const dueDate = new Date(iterYear, iterMonth, dayOfMonth);
+
+        // Skip if due date is today or before, or after target
+        if (dueDate <= today || dueDate > target) {
+          if (iterMonth === targetMonth && iterYear === targetYear) continue;
+          if (dueDate <= today) continue;
+        }
+        if (dueDate > target) continue;
+
+        // Check frequency applicability
+        const applicable = (() => {
+          if (frequency === 'annual') {
+            return (iterMonth + 1) === (rec.month_of_year as number);
+          }
+          if (frequency === 'installment') {
+            const sm = rec.start_month as number;
+            const sy = rec.start_year as number;
+            const ti = rec.total_installments as number;
+            const num = (iterYear - sy) * 12 + ((iterMonth + 1) - sm) + 1;
+            return num >= 1 && num <= ti;
+          }
+          return true;
+        })();
+
+        if (!applicable) continue;
+
+        // Check if already confirmed this month
+        const confirmed = await db.execute(
+          "SELECT COUNT(*) as count FROM finance_transactions WHERE recurring_id = ? AND status = 'confirmed' AND date >= ? AND date < ?",
+          [rec.id, `${monthPrefix}-01`, `${monthPrefix}-${String(daysInMonth).padStart(2, '0')} 23:59:59`],
+        );
+        if ((confirmed.rows[0].count as number) > 0) continue;
+
+        total += amountArs;
+        const cat = categoryCache[rec.id as number];
+        items.push({
+          title: rec.title as string,
+          amount,
+          currency,
+          amountArs,
+          dueDate,
+          categoryIcon: cat?.icon,
+          categoryColor: cat?.color,
+        });
+      }
+
+      // Advance to next month
+      if (iterMonth === 11) {
+        iterMonth = 0;
+        iterYear++;
+      } else {
+        iterMonth++;
+      }
+    }
+
+    // Sort by due date
+    items.sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
+
+    return {total, items};
   },
 }));

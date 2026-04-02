@@ -348,20 +348,27 @@ export function FinanceScreen() {
             const targetLabel = targetDate.toLocaleDateString('es-AR', {day: 'numeric', month: 'short'});
             const postPendingBalance = totalBalance - pendingRecurringTotal;
             return (
-              <Pressable onPress={handleFlip} style={styles.flipContainer}>
-                <Animated.View style={[styles.pendingRecBadge, frontAnimatedStyle]}>
-                  <Icon name="autorenew" size={14} color={colors.primary} />
-                  <Text style={styles.pendingRecText}>
-                    Pendiente hasta {targetLabel}: {formatArs(pendingRecurringTotal)}
-                  </Text>
-                </Animated.View>
-                <Animated.View style={[styles.pendingRecBadge, styles.pendingRecBadgeBack, backAnimatedStyle]}>
-                  <Icon name="account-balance-wallet" size={14} color={colors.successGreen} />
-                  <Text style={styles.pendingRecTextBack}>
-                    Post pagos: {formatArs(postPendingBalance)}
-                  </Text>
-                </Animated.View>
-              </Pressable>
+              <View style={styles.pendingRow}>
+                <Pressable onPress={handleFlip} style={[styles.flipContainer, {flex: 1}]}>
+                  <Animated.View style={[styles.pendingRecBadge, frontAnimatedStyle]}>
+                    <Icon name="autorenew" size={14} color={colors.primary} />
+                    <Text style={styles.pendingRecText}>
+                      Pendiente hasta {targetLabel}: {formatArs(pendingRecurringTotal)}
+                    </Text>
+                  </Animated.View>
+                  <Animated.View style={[styles.pendingRecBadge, styles.pendingRecBadgeBack, backAnimatedStyle]}>
+                    <Icon name="account-balance-wallet" size={14} color={colors.successGreen} />
+                    <Text style={styles.pendingRecTextBack}>
+                      Post pagos: {formatArs(postPendingBalance)}
+                    </Text>
+                  </Animated.View>
+                </Pressable>
+                <Pressable
+                  onPress={() => navigation.navigate('PendingForecast')}
+                  style={styles.forecastButton}>
+                  <Icon name="calendar-month" size={18} color={colors.primary} />
+                </Pressable>
+              </View>
             );
           })()}
 
@@ -690,9 +697,23 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.primary,
   },
-  flipContainer: {
+  pendingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     marginTop: 10,
   },
+  forecastButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: colors.primaryLight,
+    borderWidth: 1,
+    borderColor: colors.borderGoldLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  flipContainer: {},
   pendingRecBadge: {
     flexDirection: 'row',
     alignItems: 'center',

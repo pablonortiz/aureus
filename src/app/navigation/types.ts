@@ -27,6 +27,7 @@ export type RootStackParamList = {
   } | undefined;
   FinanceSettings: undefined;
   FinanceStats: undefined;
+  PendingForecast: undefined;
   ManageRecurring: undefined;
   AddRecurring: {recurringId?: number; defaultFrequency?: 'monthly' | 'installment' | 'annual'} | undefined;
   SourceFinder: undefined;
