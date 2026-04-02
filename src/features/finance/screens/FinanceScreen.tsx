@@ -151,7 +151,7 @@ export function FinanceScreen() {
   // Month navigation for trends
   const now = new Date();
   const [trendYear, setTrendYear] = useState(now.getFullYear());
-  const [trendMonth, setTrendMonth] = useState(now.getMonth() + 1); // 1-indexed
+  const [trendMonth, setTrendMonth] = useState(now.getMonth() + 1);
   const [trendData, setTrendData] = useState<{daily: number[]; total: number}>({daily: [], total: 0});
   const [monthTransactions, setMonthTransactions] = useState<FinanceTransaction[]>([]);
 
@@ -192,7 +192,6 @@ export function FinanceScreen() {
     }, [generatePendingTransactions, loadCategories, loadSalaryAmount, loadPendingLookaheadDay, loadExchangeRate, loadPendingRecurringTotal]),
   );
 
-  // Reload trend data and month transactions when month changes or transactions change
   useEffect(() => {
     getMonthExpenses(trendYear, trendMonth).then(setTrendData);
     if (!isCurrentMonth) {
@@ -217,7 +216,7 @@ export function FinanceScreen() {
     });
   };
 
-  // Flip animation for pending chip
+  // Flip animation for pending card
   const [flipped, setFlipped] = useState(false);
   const flipProgress = useSharedValue(0);
 
@@ -246,6 +245,8 @@ export function FinanceScreen() {
   const [showAll, setShowAll] = useState(false);
   const [txSearch, setTxSearch] = useState('');
   const [showSearch, setShowSearch] = useState(false);
+  const [activeTab, setActiveTab] = useState<'pending' | 'recent'>('recent');
+  const [hasSetInitialTab, setHasSetInitialTab] = useState(false);
   const PREVIEW_COUNT = 10;
 
   const handleEdit = (tx: FinanceTransaction) => {
@@ -293,6 +294,16 @@ export function FinanceScreen() {
 
   const filteredMonthTxs = filterBySearch(monthTransactions);
 
+  // Set initial tab to pending if there are pending transactions (only once)
+  useEffect(() => {
+    if (!hasSetInitialTab && pendingTxs.length > 0) {
+      setActiveTab('pending');
+      setHasSetInitialTab(true);
+    } else if (!hasSetInitialTab && transactions.length > 0) {
+      setHasSetInitialTab(true);
+    }
+  }, [pendingTxs.length, transactions.length, hasSetInitialTab]);
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -320,27 +331,36 @@ export function FinanceScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{paddingBottom: 120}}>
-        {/* Balance Total */}
+        contentContainerStyle={{paddingBottom: 120 + insets.bottom}}>
+        {/* Balance Hero */}
         <View style={styles.balanceSection}>
           <Text style={styles.balanceLabel}>BALANCE TOTAL</Text>
           <Text style={styles.balanceAmount}>
             <Text style={styles.balanceCurrency}>$</Text>
             {formatArs(totalBalance).replace('$', '')}
           </Text>
+        </View>
 
-          {/* Exchange rate badge */}
+        {/* Info Cards Row */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.infoCardsRow}>
+          {/* Exchange Rate Card */}
           {exchangeRate !== null && (
-            <Pressable onPress={refreshExchangeRate} style={styles.rateBadge}>
-              <Icon name="currency-exchange" size={14} color={colors.primary} />
-              <Text style={styles.rateText}>
-                Blue: {formatRate(exchangeRate)}
-              </Text>
-              <Icon name="refresh" size={12} color={colors.textMuted} />
+            <Pressable onPress={refreshExchangeRate} style={styles.infoCard}>
+              <View style={styles.infoCardIconWrap}>
+                <Icon name="currency-exchange" size={16} color={colors.primary} />
+              </View>
+              <Text style={styles.infoCardLabel}>Dólar Blue</Text>
+              <View style={styles.infoCardValueRow}>
+                <Text style={styles.infoCardValue}>{formatRate(exchangeRate)}</Text>
+                <Icon name="refresh" size={11} color={colors.textMuted} />
+              </View>
             </Pressable>
           )}
 
-          {/* Pending recurring badge — flippable */}
+          {/* Pending Recurring Card */}
           {pendingRecurringTotal > 0 && (() => {
             const nextM = now.getMonth() === 11 ? 0 : now.getMonth() + 1;
             const nextY = now.getMonth() === 11 ? now.getFullYear() + 1 : now.getFullYear();
@@ -348,40 +368,56 @@ export function FinanceScreen() {
             const targetLabel = targetDate.toLocaleDateString('es-AR', {day: 'numeric', month: 'short'});
             const postPendingBalance = totalBalance - pendingRecurringTotal;
             return (
-              <View style={styles.pendingRow}>
-                <Pressable onPress={handleFlip} style={[styles.flipContainer, {flex: 1}]}>
-                  <Animated.View style={[styles.pendingRecBadge, frontAnimatedStyle]}>
-                    <Icon name="autorenew" size={14} color={colors.primary} />
-                    <Text style={styles.pendingRecText}>
-                      Pendiente hasta {targetLabel}: {formatArs(pendingRecurringTotal)}
-                    </Text>
-                  </Animated.View>
-                  <Animated.View style={[styles.pendingRecBadge, styles.pendingRecBadgeBack, backAnimatedStyle]}>
-                    <Icon name="account-balance-wallet" size={14} color={colors.successGreen} />
-                    <Text style={styles.pendingRecTextBack}>
-                      Post pagos: {formatArs(postPendingBalance)}
-                    </Text>
-                  </Animated.View>
-                </Pressable>
-                <Pressable
-                  onPress={() => navigation.navigate('PendingForecast')}
-                  style={styles.forecastButton}>
-                  <Icon name="calendar-month" size={18} color={colors.primary} />
-                </Pressable>
-              </View>
+              <Pressable onPress={handleFlip} style={styles.infoCard}>
+                <Animated.View style={[styles.infoCardInner, frontAnimatedStyle]}>
+                  <View style={styles.infoCardTopRow}>
+                    <View style={styles.infoCardIconWrap}>
+                      <Icon name="autorenew" size={16} color={colors.primary} />
+                    </View>
+                    <Pressable
+                      onPress={() => navigation.navigate('PendingForecast')}
+                      hitSlop={8}
+                      style={styles.infoCardAction}>
+                      <Icon name="calendar-month" size={14} color={colors.primary} />
+                    </Pressable>
+                  </View>
+                  <Text style={styles.infoCardLabel}>Pendiente hasta {targetLabel}</Text>
+                  <Text style={styles.infoCardValue}>{formatArs(pendingRecurringTotal)}</Text>
+                </Animated.View>
+                <Animated.View style={[styles.infoCardInner, styles.infoCardInnerBack, backAnimatedStyle]}>
+                  <View style={styles.infoCardTopRow}>
+                    <View style={[styles.infoCardIconWrap, {backgroundColor: 'rgba(34, 197, 94, 0.15)'}]}>
+                      <Icon name="account-balance-wallet" size={16} color={colors.successGreen} />
+                    </View>
+                    <Pressable
+                      onPress={() => navigation.navigate('PendingForecast')}
+                      hitSlop={8}
+                      style={styles.infoCardAction}>
+                      <Icon name="calendar-month" size={14} color={colors.successGreen} />
+                    </Pressable>
+                  </View>
+                  <Text style={[styles.infoCardLabel, {color: colors.successGreen}]}>Post pagos</Text>
+                  <Text style={[styles.infoCardValue, {color: colors.successGreen}]}>
+                    {formatArs(postPendingBalance)}
+                  </Text>
+                </Animated.View>
+              </Pressable>
             );
           })()}
 
-          {/* Monthly expenses */}
+          {/* Monthly Expenses Card */}
           {monthlyExpenses > 0 && (
-            <View style={styles.monthlyBadge}>
-              <Icon name="trending-down" size={14} color={colors.dangerRed} />
-              <Text style={styles.monthlyText}>
-                -{formatArs(monthlyExpenses)} este mes
+            <View style={[styles.infoCard, styles.infoCardExpense]}>
+              <View style={[styles.infoCardIconWrap, {backgroundColor: 'rgba(239, 68, 68, 0.15)'}]}>
+                <Icon name="trending-down" size={16} color={colors.dangerRed} />
+              </View>
+              <Text style={styles.infoCardLabel}>Gastos este mes</Text>
+              <Text style={[styles.infoCardValue, {color: colors.dangerRed}]}>
+                -{formatArs(monthlyExpenses)}
               </Text>
             </View>
           )}
-        </View>
+        </ScrollView>
 
         {/* Spending Trends */}
         <View style={styles.trendCard}>
@@ -411,7 +447,7 @@ export function FinanceScreen() {
           </View>
           {(() => {
             const maxVal = Math.max(...trendData.daily, 1);
-            const CHART_HEIGHT = 60;
+            const CHART_HEIGHT = 48;
             const days = trendData.daily;
             if (days.length === 0) {
               return (
@@ -441,11 +477,10 @@ export function FinanceScreen() {
         {/* Transactions */}
         <View style={styles.txSection}>
           {isCurrentMonth ? (
-            // Current month: pending + recent
             pendingTxs.length === 0 && confirmedTxs.length === 0 && !txSearch ? (
               <>
                 <View style={styles.txHeader}>
-                  <Text style={styles.txSectionTitle}>Transacciones Recientes</Text>
+                  <Text style={styles.txSectionTitle}>Transacciones</Text>
                 </View>
                 <EmptyState
                   icon="account-balance-wallet"
@@ -455,42 +490,39 @@ export function FinanceScreen() {
               </>
             ) : (
               <>
-                {pendingTxs.length > 0 && (
-                  <>
-                    <View style={styles.txHeader}>
-                      <Text style={styles.txSectionTitle}>
-                        Pendientes ({pendingTxs.length})
+                {/* Tab bar + search */}
+                <View style={styles.txTabRow}>
+                  <View style={styles.txTabs}>
+                    <Pressable
+                      onPress={() => setActiveTab('pending')}
+                      style={[styles.txTab, activeTab === 'pending' && styles.txTabActive]}>
+                      <Text style={[styles.txTabText, activeTab === 'pending' && styles.txTabTextActive]}>
+                        Pendientes{pendingTxs.length > 0 ? ` (${pendingTxs.length})` : ''}
                       </Text>
-                    </View>
-                    <View style={styles.txList}>
-                      {pendingTxs.map(tx => (
-                        <TransactionItem
-                          key={tx.id}
-                          transaction={tx}
-                          onDelete={() => handleDelete(tx.id)}
-                          onConfirmPending={() => handleConfirmPending(tx)}
-                          onEdit={() => handleEdit(tx)}
-                          raiseAmount={raiseMap.get(tx.id) ?? null}
-                        />
-                      ))}
-                    </View>
-                  </>
-                )}
-                <View style={styles.txHeader}>
-                  <Text style={styles.txSectionTitle}>Transacciones Recientes</Text>
-                  <View style={styles.txHeaderRight}>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => setActiveTab('recent')}
+                      style={[styles.txTab, activeTab === 'recent' && styles.txTabActive]}>
+                      <Text style={[styles.txTabText, activeTab === 'recent' && styles.txTabTextActive]}>
+                        Recientes
+                      </Text>
+                    </Pressable>
+                  </View>
+                  <View style={styles.txTabActions}>
                     <Pressable onPress={() => { setShowSearch(s => !s); setTxSearch(''); }} hitSlop={8}>
                       <Icon name={showSearch ? 'close' : 'search'} size={20} color={colors.primary} />
                     </Pressable>
-                    {hasMore && (
+                    {activeTab === 'recent' && hasMore && (
                       <Pressable onPress={() => setShowAll(prev => !prev)}>
                         <Text style={styles.viewAll}>
-                          {showAll ? 'VER MENOS' : 'VER TODO'}
+                          {showAll ? 'MENOS' : 'TODO'}
                         </Text>
                       </Pressable>
                     )}
                   </View>
                 </View>
+
+                {/* Search bar */}
                 {showSearch && (
                   <View style={styles.searchBar}>
                     <Icon name="search" size={18} color={colors.textMuted} />
@@ -509,22 +541,55 @@ export function FinanceScreen() {
                     )}
                   </View>
                 )}
-                <View style={styles.txList}>
-                  {confirmedTxs.map(tx => (
-                    <TransactionItem
-                      key={tx.id}
-                      transaction={tx}
-                      onDelete={() => handleDelete(tx.id)}
-                      onConfirmPending={() => handleConfirmPending(tx)}
-                      onEdit={() => handleEdit(tx)}
-                      raiseAmount={raiseMap.get(tx.id) ?? null}
-                    />
-                  ))}
-                </View>
+
+                {/* Transaction list based on active tab */}
+                {activeTab === 'pending' ? (
+                  pendingTxs.length === 0 ? (
+                    <View style={styles.txEmptyTab}>
+                      <Icon name="check-circle" size={32} color={colors.successGreen} />
+                      <Text style={styles.txEmptyTabText}>Sin pagos pendientes</Text>
+                    </View>
+                  ) : (
+                    <View style={styles.txList}>
+                      {pendingTxs.map(tx => (
+                        <TransactionItem
+                          key={tx.id}
+                          transaction={tx}
+                          onDelete={() => handleDelete(tx.id)}
+                          onConfirmPending={() => handleConfirmPending(tx)}
+                          onEdit={() => handleEdit(tx)}
+                          raiseAmount={raiseMap.get(tx.id) ?? null}
+                        />
+                      ))}
+                    </View>
+                  )
+                ) : (
+                  <View style={styles.txList}>
+                    {confirmedTxs.length === 0 ? (
+                      <View style={styles.txEmptyTab}>
+                        <Icon name="receipt-long" size={32} color={colors.textMuted} />
+                        <Text style={styles.txEmptyTabText}>
+                          {txSearch ? 'Sin resultados' : 'Sin transacciones confirmadas'}
+                        </Text>
+                      </View>
+                    ) : (
+                      confirmedTxs.map(tx => (
+                        <TransactionItem
+                          key={tx.id}
+                          transaction={tx}
+                          onDelete={() => handleDelete(tx.id)}
+                          onConfirmPending={() => handleConfirmPending(tx)}
+                          onEdit={() => handleEdit(tx)}
+                          raiseAmount={raiseMap.get(tx.id) ?? null}
+                        />
+                      ))
+                    )}
+                  </View>
+                )}
               </>
             )
           ) : (
-            // Past month: show that month's transactions
+            // Past month view
             <>
               <View style={styles.txHeader}>
                 <Text style={styles.txSectionTitle}>
@@ -604,7 +669,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 24,
-    paddingBottom: 16,
+    paddingBottom: 8,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -657,9 +722,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.primary,
   },
+
+  // Balance Hero
   balanceSection: {
     alignItems: 'center',
-    paddingVertical: 20,
+    paddingTop: 16,
+    paddingBottom: 20,
     paddingHorizontal: 24,
   },
   balanceLabel: {
@@ -672,109 +740,93 @@ const styles = StyleSheet.create({
   },
   balanceAmount: {
     fontFamily: fontFamily.bold,
-    fontSize: 32,
+    fontSize: 36,
     color: colors.textPrimary,
   },
   balanceCurrency: {
     fontFamily: fontFamily.bold,
-    fontSize: 20,
+    fontSize: 22,
     color: colors.primary,
   },
-  rateBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 12,
-    backgroundColor: colors.primaryLight,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: borderRadius.full,
+
+  // Info Cards Row
+  infoCardsRow: {
+    paddingHorizontal: 24,
+    gap: 10,
+    paddingBottom: 20,
+  },
+  infoCard: {
+    backgroundColor: colors.surfaceDark,
+    borderRadius: borderRadius.lg,
+    padding: 14,
     borderWidth: 1,
-    borderColor: colors.borderGoldLight,
+    borderColor: colors.borderSubtle,
+    minWidth: 140,
   },
-  rateText: {
-    fontFamily: fontFamily.semiBold,
-    fontSize: 13,
-    color: colors.primary,
+  infoCardExpense: {},
+  infoCardInner: {
+    gap: 4,
   },
-  pendingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 10,
-  },
-  forecastButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: colors.primaryLight,
-    borderWidth: 1,
-    borderColor: colors.borderGoldLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  flipContainer: {},
-  pendingRecBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: colors.primaryLight,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: borderRadius.full,
-    borderWidth: 1,
-    borderColor: colors.borderGoldLight,
-  },
-  pendingRecBadgeBack: {
+  infoCardInnerBack: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(34, 197, 94, 0.1)',
-    borderColor: 'rgba(34, 197, 94, 0.3)',
+    bottom: 0,
   },
-  pendingRecText: {
-    fontFamily: fontFamily.semiBold,
-    fontSize: 13,
-    color: colors.primary,
+  infoCardTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  pendingRecTextBack: {
-    fontFamily: fontFamily.semiBold,
-    fontSize: 13,
-    color: colors.successGreen,
+  infoCardAction: {
+    padding: 2,
   },
-  monthlyBadge: {
+  infoCardIconWrap: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  infoCardLabel: {
+    fontFamily: fontFamily.medium,
+    fontSize: 11,
+    color: colors.textSecondary,
+  },
+  infoCardValueRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    marginTop: 10,
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: borderRadius.full,
+    marginTop: 2,
   },
-  monthlyText: {
-    fontFamily: fontFamily.medium,
-    fontSize: 12,
-    color: colors.dangerRed,
+  infoCardValue: {
+    fontFamily: fontFamily.bold,
+    fontSize: 16,
+    color: colors.textPrimary,
+    marginTop: 2,
   },
+
+  // Spending Trends
   trendCard: {
     marginHorizontal: 24,
     backgroundColor: colors.surfaceDark,
     borderRadius: borderRadius.lg,
-    padding: 20,
+    padding: 16,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
-    marginBottom: 24,
+    marginBottom: 20,
   },
   trendHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   trendTitle: {
     fontFamily: fontFamily.bold,
-    fontSize: 16,
+    fontSize: 15,
     color: colors.textPrimary,
   },
   trendMonthNav: {
@@ -785,7 +837,7 @@ const styles = StyleSheet.create({
   },
   trendMonthLabel: {
     fontFamily: fontFamily.semiBold,
-    fontSize: 14,
+    fontSize: 13,
     color: colors.textSecondary,
     textTransform: 'capitalize',
   },
@@ -813,7 +865,7 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   chartEmpty: {
-    height: 60,
+    height: 48,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -822,6 +874,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.textMuted,
   },
+
+  // Transactions Section
   txSection: {
     flex: 1,
     paddingHorizontal: 24,
@@ -831,13 +885,48 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
-    marginTop: 8,
+    marginTop: 4,
   },
-  txHeaderRight: {
+
+  // Tab bar
+  txTabRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  txTabs: {
+    flexDirection: 'row',
+    backgroundColor: colors.surfaceDark,
+    borderRadius: borderRadius.sm,
+    padding: 3,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+  },
+  txTab: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: borderRadius.sm - 2,
+  },
+  txTabActive: {
+    backgroundColor: colors.primaryLight,
+    borderWidth: 1,
+    borderColor: colors.borderGold,
+  },
+  txTabText: {
+    fontFamily: fontFamily.semiBold,
+    fontSize: 13,
+    color: colors.textMuted,
+  },
+  txTabTextActive: {
+    color: colors.primary,
+  },
+  txTabActions: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
+
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -867,11 +956,24 @@ const styles = StyleSheet.create({
   },
   viewAll: {
     fontFamily: fontFamily.bold,
-    fontSize: 12,
+    fontSize: 11,
     letterSpacing: 1,
     color: colors.primary,
     textTransform: 'uppercase',
   },
+  txEmptyTab: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+    gap: 10,
+  },
+  txEmptyTabText: {
+    fontFamily: fontFamily.medium,
+    fontSize: 14,
+    color: colors.textSecondary,
+  },
+
+  // Transaction Item
   txItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -965,6 +1067,8 @@ const styles = StyleSheet.create({
   currencyBadgeTextUsd: {
     color: '#60a5fa',
   },
+
+  // Bottom bar
   addBtnContainer: {
     position: 'absolute',
     left: 24,
