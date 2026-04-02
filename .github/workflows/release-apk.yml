@@ -1,0 +1,47 @@
+name: Release APK
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build-and-upload:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            android/.gradle
+            android/app/build
+          key: gradle-build-${{ hashFiles('android/app/build.gradle', 'android/gradle.properties', 'package-lock.json') }}
+          restore-keys: gradle-build-
+
+      - run: npm ci
+
+      - name: Set version from tag
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          VERSION_CODE=$(echo "$VERSION" | awk -F. '{ printf "%d", $1*10000+$2*100+$3 }')
+          sed -i "s/versionName \".*\"/versionName \"$VERSION\"/" android/app/build.gradle
+          sed -i "s/versionCode .*/versionCode $VERSION_CODE/" android/app/build.gradle
+
+      - run: cd android && ./gradlew assembleRelease
+
+      - name: Upload APK to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: android/app/build/outputs/apk/release/app-release.apk
