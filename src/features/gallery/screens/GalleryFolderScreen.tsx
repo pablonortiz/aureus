@@ -48,8 +48,19 @@ export function GalleryFolderScreen() {
     loadFolders,
     lock,
     toggleSelection,
+    selectAll,
     clearSelection,
   } = useGalleryStore();
+
+  const allSelected = media.length > 0 && selectedIds.length === media.length;
+
+  const handleSelectAllToggle = () => {
+    if (allSelected) {
+      clearSelection();
+    } else {
+      selectAll();
+    }
+  };
 
   // FLAG_SECURE while inside gallery
   useEffect(() => {
@@ -177,6 +188,13 @@ export function GalleryFolderScreen() {
           navigation.goBack();
         }}
         rightActions={[
+          ...(media.length > 0
+            ? [{
+                icon: allSelected ? 'deselect' : 'select-all',
+                color: allSelected ? colors.primary : undefined,
+                onPress: handleSelectAllToggle,
+              }]
+            : []),
           {icon: 'search', onPress: () => setShowSearch(s => !s)},
         ]}
       />

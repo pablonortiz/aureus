@@ -7,7 +7,7 @@ import {Icon} from '../../../core/components';
 interface GalleryHeaderProps {
   title: string;
   onBack?: () => void;
-  rightActions?: Array<{icon: string; onPress: () => void}>;
+  rightActions?: Array<{icon: string; onPress: () => void; color?: string}>;
 }
 
 export function GalleryHeader({title, onBack, rightActions}: GalleryHeaderProps) {
@@ -27,7 +27,11 @@ export function GalleryHeader({title, onBack, rightActions}: GalleryHeaderProps)
         <View style={styles.right}>
           {rightActions.map((action, i) => (
             <Pressable key={i} onPress={action.onPress} style={styles.actionBtn}>
-              <Icon name={action.icon} size={22} color={colors.textSecondary} />
+              <Icon
+                name={action.icon}
+                size={22}
+                color={action.color || colors.textSecondary}
+              />
             </Pressable>
           ))}
         </View>

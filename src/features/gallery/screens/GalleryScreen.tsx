@@ -60,9 +60,20 @@ export function GalleryScreen() {
     moveMedia,
     loadCategories,
     toggleSelection,
+    selectAll,
     clearSelection,
     cleanupExpiredTrash,
   } = useGalleryStore();
+
+  const allSelected = media.length > 0 && selectedIds.length === media.length;
+
+  const handleSelectAllToggle = () => {
+    if (allSelected) {
+      clearSelection();
+    } else {
+      selectAll();
+    }
+  };
 
   const [showNewFolder, setShowNewFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
@@ -297,6 +308,13 @@ export function GalleryScreen() {
         title="Galería"
         onBack={() => navigation.goBack()}
         rightActions={[
+          ...(media.length > 0
+            ? [{
+                icon: allSelected ? 'deselect' : 'select-all',
+                color: allSelected ? colors.primary : undefined,
+                onPress: handleSelectAllToggle,
+              }]
+            : []),
           {icon: 'search', onPress: () => setShowSearch(s => !s)},
           {icon: 'label', onPress: () => navigation.navigate('ManageGalleryCategories')},
           {icon: 'delete', onPress: () => navigation.navigate('GalleryTrash')},
