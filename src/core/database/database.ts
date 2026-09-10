@@ -48,10 +48,26 @@ function runMigrations(database: DB): void {
       gmail_id INTEGER NOT NULL REFERENCES gmail_accounts(id) ON DELETE CASCADE,
       platform_id INTEGER NOT NULL REFERENCES platforms(id) ON DELETE CASCADE,
       is_registered INTEGER DEFAULT 0,
+      status TEXT DEFAULT 'pending',
       updated_at TEXT DEFAULT (datetime('now')),
       UNIQUE(gmail_id, platform_id)
     );
   `);
+
+  // Gmail: two-state is_registered → three-state status (pending/created/finished).
+  // The ALTER only succeeds on databases created before the column existed, so the
+  // backfill runs exactly once: what used to be crossed out is now "finished".
+  try {
+    database.executeSync(
+      "ALTER TABLE gmail_platform_status ADD COLUMN status TEXT DEFAULT 'pending'",
+    );
+    database.executeSync(
+      `UPDATE gmail_platform_status
+       SET status = CASE WHEN is_registered = 1 THEN 'finished' ELSE 'pending' END`,
+    );
+  } catch (_e) {
+    // Column already exists — already migrated
+  }
 
   // Clipboard module
   database.executeSync(`

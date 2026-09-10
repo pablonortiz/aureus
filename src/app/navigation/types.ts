@@ -5,6 +5,7 @@ export type RootStackParamList = {
   GmailAccounts: undefined;
   AddGmail: undefined;
   AddPlatform: undefined;
+  ManagePlatforms: undefined;
   Clipboard: undefined;
   AddLink: {isPrivate?: boolean};
   AddItem: {isPrivate?: boolean; folderId?: number};

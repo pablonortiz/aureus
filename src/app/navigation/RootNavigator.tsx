@@ -6,6 +6,7 @@ import {MainTabNavigator} from './MainTabNavigator';
 import {AccountsScreen} from '../../features/gmail-accounts/screens/AccountsScreen';
 import {AddGmailScreen} from '../../features/gmail-accounts/screens/AddGmailScreen';
 import {AddPlatformScreen} from '../../features/gmail-accounts/screens/AddPlatformScreen';
+import {ManagePlatformsScreen} from '../../features/gmail-accounts/screens/ManagePlatformsScreen';
 import {ClipboardScreen} from '../../features/clipboard/screens/ClipboardScreen';
 import {AddLinkScreen} from '../../features/clipboard/screens/AddLinkScreen';
 import {AddItemScreen} from '../../features/clipboard/screens/AddItemScreen';
@@ -82,6 +83,7 @@ export function RootNavigator() {
         <Stack.Screen name="GmailAccounts" component={AccountsScreen} />
         <Stack.Screen name="AddGmail" component={AddGmailScreen} />
         <Stack.Screen name="AddPlatform" component={AddPlatformScreen} />
+        <Stack.Screen name="ManagePlatforms" component={ManagePlatformsScreen} />
         <Stack.Screen name="Clipboard" component={ClipboardScreen} />
         <Stack.Screen name="AddLink" component={AddLinkScreen} />
         <Stack.Screen name="AddItem" component={AddItemScreen} />

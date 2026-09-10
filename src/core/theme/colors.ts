@@ -21,7 +21,9 @@ export const colors = {
   borderGoldLight: 'rgba(232, 186, 48, 0.1)',
 
   successGreen: '#22c55e',
+  successGreenLight: 'rgba(34, 197, 94, 0.12)',
   dangerRed: '#ef4444',
+  dangerRedLight: 'rgba(239, 68, 68, 0.1)',
   white: '#ffffff',
   black: '#000000',
   transparent: 'transparent',

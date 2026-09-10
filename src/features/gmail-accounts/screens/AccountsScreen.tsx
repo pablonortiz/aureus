@@ -1,116 +1,111 @@
-import React, {useEffect, useCallback} from 'react';
-import {StyleSheet, Text, View, FlatList, Pressable, Alert} from 'react-native';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import {StyleSheet, Text, View, FlatList, Pressable} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {colors, typography, fontFamily, borderRadius} from '../../../core/theme';
-import {Icon, Chip, FAB, EmptyState} from '../../../core/components';
+import {Icon, FAB, EmptyState} from '../../../core/components';
 import {useGmailStore} from '../store/useGmailStore';
-import type {GmailAccountWithPlatforms} from '../../../core/types';
+import type {
+  AccountPlatform,
+  GmailAccountWithPlatforms,
+  PlatformStatus,
+} from '../../../core/types';
 import type {RootStackParamList} from '../../../app/navigation/types';
+import {GmailCard} from '../components/GmailCard';
+import {StatusLegend} from '../components/StatusLegend';
+import {PlatformStatusSheet} from '../components/PlatformStatusSheet';
+import {AddPlatformToAccountSheet} from '../components/AddPlatformToAccountSheet';
 
-function GmailCard({account}: {account: GmailAccountWithPlatforms}) {
-  const togglePlatformStatus = useGmailStore(s => s.togglePlatformStatus);
-  const deleteAccount = useGmailStore(s => s.deleteAccount);
-
-  const statusText = account.allCompleted
-    ? 'Todos los registros sincronizados'
-    : account.totalCount === 0
-      ? 'Listo para configurar'
-      : `${account.pendingCount} plataformas pendientes`;
-
-  const handleDelete = () => {
-    Alert.alert(
-      'Eliminar cuenta',
-      `¿Eliminar ${account.email_prefix}@gmail.com?`,
-      [
-        {text: 'Cancelar', style: 'cancel'},
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: () => deleteAccount(account.id),
-        },
-      ],
-    );
-  };
-
-  return (
-    <View
-      style={[
-        styles.card,
-        account.allCompleted && styles.cardCompleted,
-      ]}>
-      <View style={styles.cardHeader}>
-        <View style={styles.cardHeaderLeft}>
-          <View style={[styles.mailIcon, account.allCompleted && styles.mailIconCompleted]}>
-            <Icon
-              name="mail"
-              size={20}
-              color={account.allCompleted ? colors.textMuted : colors.dangerRed}
-            />
-          </View>
-          <View>
-            <Text
-              style={[
-                styles.email,
-                account.allCompleted && styles.emailCompleted,
-              ]}>
-              {account.email_prefix}@gmail.com
-            </Text>
-            <Text
-              style={[
-                styles.status,
-                account.allCompleted && styles.statusCompleted,
-              ]}>
-              {account.allCompleted && (
-                <Icon name="done-all" size={12} color={colors.successGreen} />
-              )}{' '}
-              {statusText}
-            </Text>
-          </View>
-        </View>
-        <Pressable onPress={handleDelete}>
-          <Icon
-            name="more-vert"
-            size={20}
-            color={account.allCompleted ? colors.textMuted : colors.primary}
-          />
-        </Pressable>
-      </View>
-
-      <View style={styles.chipsContainer}>
-        {account.platforms.map(p => (
-          <Chip
-            key={p.platform_id}
-            label={p.platform_name || ''}
-            completed={p.is_registered}
-            icon="sync"
-            onPress={() => togglePlatformStatus(account.id, p.platform_id)}
-          />
-        ))}
-      </View>
-    </View>
-  );
+interface PlatformTarget {
+  account: GmailAccountWithPlatforms;
+  platform: AccountPlatform;
 }
 
 export function AccountsScreen() {
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const {accounts, loading, loadAccounts, loadPlatforms} = useGmailStore();
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const {
+    accounts,
+    platforms,
+    loadAccounts,
+    loadPlatforms,
+    setPlatformStatus,
+    removePlatformFromAccount,
+    addPlatformToAccount,
+  } = useGmailStore();
+
+  const [statusTarget, setStatusTarget] = useState<PlatformTarget | null>(null);
+  const [addTarget, setAddTarget] = useState<GmailAccountWithPlatforms | null>(
+    null,
+  );
 
   useEffect(() => {
     loadAccounts();
     loadPlatforms();
   }, [loadAccounts, loadPlatforms]);
 
+  const addTargetPlatformNames = useMemo(
+    () =>
+      new Set(
+        (addTarget?.platforms || []).map(platform =>
+          platform.platform_name.toLowerCase(),
+        ),
+      ),
+    [addTarget],
+  );
+
+  const availablePlatforms = useMemo(
+    () =>
+      platforms.filter(
+        platform => !addTargetPlatformNames.has(platform.name.toLowerCase()),
+      ),
+    [platforms, addTargetPlatformNames],
+  );
+
+  const handleSelectStatus = async (status: PlatformStatus) => {
+    if (!statusTarget) {
+      return;
+    }
+    const {account, platform} = statusTarget;
+    setStatusTarget(null);
+    await setPlatformStatus(account.id, platform.platform_id, status);
+  };
+
+  const handleRemovePlatform = async () => {
+    if (!statusTarget) {
+      return;
+    }
+    const {account, platform} = statusTarget;
+    setStatusTarget(null);
+    await removePlatformFromAccount(account.id, platform.platform_id);
+  };
+
+  const handleAddPlatform = async (name: string) => {
+    if (!addTarget) {
+      return;
+    }
+    const accountId = addTarget.id;
+    setAddTarget(null);
+    await addPlatformToAccount(accountId, name);
+  };
+
   const renderItem = useCallback(
-    ({item}: {item: GmailAccountWithPlatforms}) => <GmailCard account={item} />,
+    ({item}: {item: GmailAccountWithPlatforms}) => (
+      <GmailCard
+        account={item}
+        onPlatformLongPress={platform =>
+          setStatusTarget({account: item, platform})
+        }
+        onAddPlatform={() => setAddTarget(item)}
+      />
+    ),
     [],
   );
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={[styles.header, {paddingTop: insets.top + 12}]}>
         <View style={styles.headerLeft}>
           <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
@@ -120,18 +115,24 @@ export function AccountsScreen() {
         </View>
       </View>
 
-      {/* Add Platform to All */}
       <View style={styles.managementSection}>
         <Text style={styles.sectionLabel}>GESTIÓN</Text>
         <Pressable
-          style={styles.addPlatformBtn}
+          style={styles.managementBtn}
           onPress={() => navigation.navigate('AddPlatform')}>
           <Icon name="add-box" size={22} color={colors.primary} />
-          <Text style={styles.addPlatformText}>Añadir Plataforma a Todos</Text>
+          <Text style={styles.managementText}>Añadir Plataforma a Todos</Text>
+        </Pressable>
+        <Pressable
+          style={[styles.managementBtn, styles.managementBtnSecondary]}
+          onPress={() => navigation.navigate('ManagePlatforms')}>
+          <Icon name="tune" size={22} color={colors.textSecondary} />
+          <Text style={styles.managementTextSecondary}>
+            Gestionar Plataformas
+          </Text>
         </Pressable>
       </View>
 
-      {/* Account List */}
       <Text style={styles.listLabel}>IDENTIDADES GMAIL</Text>
 
       {accounts.length === 0 ? (
@@ -141,19 +142,44 @@ export function AccountsScreen() {
           description="Agregá tu primera cuenta Gmail para empezar a trackear plataformas."
         />
       ) : (
-        <FlatList
-          data={accounts}
-          renderItem={renderItem}
-          keyExtractor={item => String(item.id)}
-          contentContainerStyle={styles.list}
-          showsVerticalScrollIndicator={false}
-        />
+        <>
+          <StatusLegend />
+          <FlatList
+            data={accounts}
+            renderItem={renderItem}
+            keyExtractor={item => String(item.id)}
+            contentContainerStyle={[
+              styles.list,
+              {paddingBottom: 100 + insets.bottom},
+            ]}
+            showsVerticalScrollIndicator={false}
+          />
+        </>
       )}
 
-      {/* FAB */}
       <View style={[styles.fabContainer, {bottom: 24 + insets.bottom}]}>
         <FAB onPress={() => navigation.navigate('AddGmail')} />
       </View>
+
+      <PlatformStatusSheet
+        visible={!!statusTarget}
+        platform={statusTarget?.platform || null}
+        email={
+          statusTarget ? `${statusTarget.account.email_prefix}@gmail.com` : ''
+        }
+        onSelect={handleSelectStatus}
+        onRemove={handleRemovePlatform}
+        onClose={() => setStatusTarget(null)}
+      />
+
+      <AddPlatformToAccountSheet
+        visible={!!addTarget}
+        email={addTarget ? `${addTarget.email_prefix}@gmail.com` : ''}
+        availablePlatforms={availablePlatforms}
+        accountPlatformNames={addTargetPlatformNames}
+        onAdd={handleAddPlatform}
+        onClose={() => setAddTarget(null)}
+      />
     </View>
   );
 }
@@ -194,6 +220,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 24,
     paddingBottom: 16,
+    gap: 10,
   },
   sectionLabel: {
     fontFamily: fontFamily.semiBold,
@@ -203,7 +230,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     marginBottom: 8,
   },
-  addPlatformBtn: {
+  managementBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -215,10 +242,20 @@ const styles = StyleSheet.create({
     borderColor: colors.borderGold,
     backgroundColor: colors.primaryLight,
   },
-  addPlatformText: {
+  managementBtnSecondary: {
+    paddingVertical: 12,
+    borderColor: colors.borderSubtle,
+    backgroundColor: colors.cardDark,
+  },
+  managementText: {
     fontFamily: fontFamily.bold,
     fontSize: 14,
     color: colors.primary,
+  },
+  managementTextSecondary: {
+    fontFamily: fontFamily.semiBold,
+    fontSize: 14,
+    color: colors.textSecondary,
   },
   listLabel: {
     fontFamily: fontFamily.bold,
@@ -232,66 +269,7 @@ const styles = StyleSheet.create({
   },
   list: {
     paddingHorizontal: 24,
-    paddingBottom: 100,
     gap: 16,
-  },
-  card: {
-    backgroundColor: colors.cardDark,
-    borderRadius: borderRadius.lg,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-  },
-  cardCompleted: {
-    opacity: 0.6,
-    backgroundColor: `${colors.cardDark}80`,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  cardHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    flex: 1,
-  },
-  mailIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: borderRadius.sm,
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  mailIconCompleted: {
-    backgroundColor: 'rgba(100, 116, 139, 0.1)',
-  },
-  email: {
-    fontFamily: fontFamily.bold,
-    fontSize: 15,
-    color: colors.textPrimary,
-  },
-  emailCompleted: {
-    textDecorationLine: 'line-through',
-    opacity: 0.7,
-  },
-  status: {
-    fontFamily: fontFamily.regular,
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
-  statusCompleted: {
-    fontFamily: fontFamily.medium,
-    color: colors.successGreen,
-  },
-  chipsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
   },
   fabContainer: {
     position: 'absolute',

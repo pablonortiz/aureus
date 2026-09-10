@@ -1,4 +1,6 @@
 // Gmail module types
+export type PlatformStatus = 'pending' | 'created' | 'finished';
+
 export interface GmailAccount {
   id: number;
   email_prefix: string;
@@ -12,20 +14,28 @@ export interface Platform {
   created_at: string;
 }
 
-export interface GmailPlatformStatus {
-  id: number;
-  gmail_id: number;
+/** A platform of the global catalog with how it is spread across accounts. */
+export interface PlatformUsage extends Platform {
+  accountCount: number;
+  pendingCount: number;
+  createdCount: number;
+  finishedCount: number;
+}
+
+/** A platform as seen from one Gmail account, with its status there. */
+export interface AccountPlatform {
   platform_id: number;
-  is_registered: boolean;
-  updated_at: string;
-  platform_name?: string;
+  platform_name: string;
+  status: PlatformStatus;
 }
 
 export interface GmailAccountWithPlatforms extends GmailAccount {
-  platforms: GmailPlatformStatus[];
+  platforms: AccountPlatform[];
   pendingCount: number;
+  createdCount: number;
+  finishedCount: number;
   totalCount: number;
-  allCompleted: boolean;
+  allFinished: boolean;
 }
 
 // Clipboard module types
